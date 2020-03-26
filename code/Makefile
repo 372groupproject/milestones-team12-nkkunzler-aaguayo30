@@ -14,10 +14,11 @@ EXEC = ""
 endif
 
 $(TARGET): $(OBJ)
-	$(LD) $(LDFLAGS) -o $@ -lc $^
+	@ $(LD) $(LDFLAGS) -o $@ -lc $^
+	@ ./$@
 
 %.o: %.asm
-	$(ASM) $(ASMFLAGS) $< -o $@
+	@ $(ASM) $(ASMFLAGS) $< -o $@
 
 all:
 	@echo all: NOT YET ADDED

@@ -1,9 +1,10 @@
 section .data
-	msg		db "Hello World", 0xa, 0x0	; String 'Hello, World', 10 = '\n' and 0 = '\0'
+	msg		db "Hello, World!", 0xa, 0x0	; String 'Hello, World', 10 = '\n' and 0 = '\0'
 	msg_len equ $ - msg					; Length of the msg
 
 section .text
-	global _start
+
+global _start
 
 _start:
 	; Print Hello World
