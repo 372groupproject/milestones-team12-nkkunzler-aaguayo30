@@ -9,6 +9,6 @@ Code segements created throughout the final project for CS372.
 * To run the user input program, the extra program, use:  
 ```make input```
 
-### Authors
+## Authors
 Angel Aguayo  
 Nicholas Kunzler
