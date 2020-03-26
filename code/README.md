@@ -1,7 +1,16 @@
-## Code Snippets
+# Code Snippets
+Code segements created throughout the final project for CS372.
 
-### Usage
+---
+## Usage
+### Milestone 1
+* To run the hello world program, use:  
+```make hello```
 
-#### Authors
-Angel Aguayo
+* To run the user input program, the extra program, use:  
+```make input```
+
+---
+### Authors
+Angel Aguayo  
 Nicholas Kunzler
