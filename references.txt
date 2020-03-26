@@ -1,1 +1,15 @@
-References
+Reference Website: 			https://cs.lmu.edu/~ray/notes/x86assembly/
+Reference Webiste:			https://github.com/Captainarash/The_Holy_Book_of_X86
+Reference PDF: 				http://www.egr.unlv.edu/~ed/assembly64.pdf
+Reference PDF: 				http://index-of.es/Programming/Assembly/Assembly%20Language%20for%20x86%20Processors%206th%20Ed.pdf
+Language Reference Manual: 	https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
+Community Reference:		
+Major Project:				https://github.com/hsoft/collapseos		
+Assembler (NASM): https://www.nasm.us/index.php
+
+Additional References
+---------------------
+	Ncurses: https://www.tldp.org/HOWTO/pdf/NCURSES-Programming-HOWTO.pdf
+
+	History: http://gunkies.org/wiki/Intel_x86
+			 https://www.pcworld.com/article/146957/article.html	

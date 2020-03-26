@@ -28,6 +28,13 @@ _start:
 	; Print Welcome Message
 	mov 	rax, 0x1		; syscall for printing
 	mov		rdi, 0x1		; print a string
+	mov		rsi, welcome_msg; print message
+	mov		rdx, welcome_msg_len; String length
+	syscall
+
+	; Print User Name 
+	mov 	rax, 0x1		; syscall for printing
+	mov		rdi, 0x1		; print a string
 	mov		rsi, usr_name	; print message
 	mov		rdx, 0x10		; String length
 	syscall
