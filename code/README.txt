@@ -15,12 +15,6 @@ Milestone 1
 	- To run the p2_loop program, use:
 	  $ make p2_loop
 
-	- To run the p2_call program, use:
-	  $ make p2_call
-
-	- To run the p2_syscall program, use:
-	  $ make p2_syscall
-
 
 Authors
 =======
