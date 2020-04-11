@@ -1,0 +1,26 @@
+$(TARGET	Makefile	/^$(TARGET): $(OBJ)$/
+%.o	Makefile	/^%.o: %.asm$/
+.PHONY	Makefile	/^.PHONY: clean$/
+ASM	Makefile	/^ASM = nasm$/
+ASMFLAGS	Makefile	/^ASMFLAGS = -g -f elf64$/
+EXEC	Makefile	/^EXEC = $(basename $(wildcard *.asm))$/
+EXEC	Makefile	/^EXEC = ""$/
+LD	Makefile	/^LD = ld$/
+LDFLAGS	Makefile	/^LDFLAGS = -g -dynamic-linker \/lib64\/ld-linux-x86-6/
+OBJ	Makefile	/^OBJ = $(TARGET).o$/
+TARGET	Makefile	/^TARGET = $(MAKECMDGOALS)$/
+_close_file	read_file.asm	/^_close_file:$/
+_close_file_err	read_file.asm	/^_close_file_err:$/
+_open_file	read_file.asm	/^_open_file:$/
+_open_file_err	read_file.asm	/^_open_file_err:$/
+_read_file	read_file.asm	/^_read_file:$/
+_read_file_err	read_file.asm	/^_read_file_err:$/
+_start	read_file.asm	/^_start:$/
+all	Makefile	/^all:$/
+clean	Makefile	/^clean:$/
+global	read_file.asm	/^global _start$/
+section	read_file.asm	/^section .data$/
+section	read_file.asm	/^section .bss$/
+section	read_file.asm	/^section .text$/
+section	read_file.asm	/^section .data$/
+section	read_file.asm	/^section .text$/
