@@ -6,13 +6,13 @@ extern endwin
 extern mvaddch
 
 section .data
-	map:		db "map2.txt", 0x0
+	map:		db "map1.txt", 0x0
 	map_len:	equ $ - map
 
-	buffer_len:	equ 1282	; (# rows + 1) * (# columns)
+	buffer_len:	equ 1282	; (# rows + 1) * (# columns): Map = 60 col x 21 rows
 
 section .bss
-	buffer: resb 1283		; (# rows + 1) * (# columns) + 1
+	buffer: resb 1283		; (# rows + 1) * (# columns) + 1: Map = 60 col x 21 row
 
 section .text
 global _start
@@ -33,48 +33,74 @@ _start:
 	pop		rdi				; Load map descriptor
 	CALL	_close_file
 
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; Ncurses stuff
 	;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;CALL	initscr
-	;CALL	cbreak
-	;CALL	noecho
+	CALL	initscr
+	CALL	cbreak
+	CALL	noecho
 
-	; WHY YOU BROKEN
-	XOR		rcx, rcx
-	MOV		rbx, buffer
+	XOR		rdi, rdi		; col = 0
+	XOR		rsi, rsi		; row = 0
+	MOV		rdx, buffer		; map
+	CALL	_render_map
 
-_PRINT_BUFF:
-	MOV		rdx, rbx
-	MOV		rdx, [rdx]
-	CMP		rdx, 0x0
-	JE		_END_PRINT_BUFF
-	ADD		rbx, 1
-	ADD		rcx, 1
-	JMP		_PRINT_BUFF
-
-_END_PRINT_BUFF:
 
 	; Can be relaced by native x86 code
-	;CALL	getch
-	;CALL	endwin
+	CALL	getch
+	CALL	endwin
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; DONE WITH Ncurses stuff reg output
 	;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	; Print the map to the terminal
-	MOV		rax, 0x1
-	MOV		rdi, 0x1
-	MOV		rsi, buffer
-	MOV		rdx, buffer_len
-	SYSCALL
-
 	; Exit error code 0
 	MOV		rax, 0x3c
 	XOR		rdi, rdi		; XOR improves speed :)
 	SYSCALL
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Following procedures are used to open, read, and close a file.
+; All error checking is done within the corresponding procedures
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_render_map:
+	push	rbx				; Need to save rbx reg, convention
+	MOV		rbx, rdx		; map 
+
+_render_map_loop:
+	XOR		rax, rax		; Zeroing so that a char value can be stored
+	MOV		al, [rbx]		; Store result in lower 8 bits or rax register
+
+	CMP		rax, 0xa		; New line, need to change row and col accordingly
+	JE		_render_new_line
+
+	CMP		rax, 0x0		; Reached end of file / map buffer
+	JNE		_render_map_char
+	pop		rbx
+	RET
+
+_render_map_char:
+
+	PUSH	rsi				; Save Col as mvaddch may trash the value
+	PUSH	rdi				; Save Row as mvaddch may trash the value
+	MOV		rdx, rax		; mvaddch char = curr_char
+	CALL	mvaddch			
+
+	POP		rdi				; Restore Row value
+	POP		rsi				; Restore Col value
+
+	ADD		rbx, 1			; Get next char
+	ADD		rsi, 1			; Row += 1
+	JMP		_render_map_loop
+
+_render_new_line:
+	MOV		rsi, 0			; Row = 0
+	ADD		rdi, 1			; Col += 1
+	ADD		rbx, 1			; Next char in buffer
+	JMP		_render_map_loop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
