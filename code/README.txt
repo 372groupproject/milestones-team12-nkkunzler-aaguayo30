@@ -10,10 +10,10 @@ Milestone 1
 	  $ make input && ./input
 
 	- To run the part 2 jump instruction set, use:
-	  $ make p2_jump && p2_jump
+	  $ make p2_jump && ./p2_jump
 
 	- To run the p2_loop program, use:
-	  $ make p2_loop && p2_loop
+	  $ make p2_loop && ./p2_loop
 
 
 Authors
