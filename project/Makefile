@@ -1,4 +1,4 @@
-ASM = nasm
+ASM = ../bin/nasm
 ASMFLAGS = -g -f elf64
 LD = ld
 LDFLAGS = -g -dynamic-linker /lib64/ld-linux-x86-64.so.2
