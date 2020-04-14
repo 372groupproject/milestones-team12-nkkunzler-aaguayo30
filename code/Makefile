@@ -15,7 +15,6 @@ endif
 
 $(TARGET): $(OBJ)
 	@ $(LD) $(LDFLAGS) -o $@ -lc $^
-	@ ./$@
 
 %.o: %.asm
 	@ $(ASM) $(ASMFLAGS) $< -o $@
