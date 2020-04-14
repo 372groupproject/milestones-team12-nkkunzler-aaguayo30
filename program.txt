@@ -1,0 +1,7 @@
+Our program will implement a puzzle game that is similar to that of BitLife's escape room. The game has a single play that walks around a square room filled with walls. In addition to the player, there will be an enemy that chases after the player and trys to capture them. If the play can reach the exit before they are caught they win the game.
+
+We expect the program to have have multiple procedures and possible assembly files in order to segment the code into more easy to manage sections, this however is still in consideration. If there are multiple files there would be a file such as load_map.asm, to load a map, which is just a regular .txt file, player.asm, for procedures to manage player logic such as movement and collision, and a main file that brings the game together.
+
+Due to the fact that we are programming this game in x86 Assembly, we expect the code to be hopefully no more than 800 lines of code. This is an extremely rough estimate as it is hard to estimate how nicely Ncurses, the library we are using to help render everything, will play with us. 
+
+Our game will display a multitude of difference features of x86, which are quite limited. These features include jumps, calls, file reading, usage of other libraries, and a few data strutures. Because of this, we will be deminstrating the versatility of the language, it can do anything an other language can do!
