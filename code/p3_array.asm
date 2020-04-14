@@ -36,9 +36,9 @@ _replace:
 	jmp		_loop
 
 _print_max:
-	add		r11, '0'
+	add		r11, '0'			; convert integer to character
 		
-	mov		[temp], r11
+	mov		[temp], r11			; move integer to memory to pass as a pointer
 
 	mov 	rdi, 0x1			; write to stdout
 	mov 	rsi, temp			; store element of array
