@@ -1,5 +1,128 @@
 extern mvwaddch
+extern wmove
 
+section .bss
+	map_char:	resb 1
+
+section .text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Parameters:	rdi - Window*
+;				rsi - Map File
+;				rdx - Map Size
+;				rcx - X location
+;				r8 	- Y location
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_render_map:
+	; Saving the registers that are non-volatile
+	PUSH	r12
+	PUSH	r13
+	PUSH	r14
+	PUSH	r15
+	PUSH	rdx				; Number of bytes to read
+	MOV		r12, rdi		; Window *
+	MOV		r13, rcx		; X Location
+	MOV		r14, rcx		; Original X Location
+	MOV		r15, r8			; Y Location
+
+	; Opening the file
+	MOV		rdi, rsi		; File Name
+	MOV		rax, 0x2		
+	XOR		rsi, rsi
+	XOR		rdx, rdx
+	SYSCALL
+
+	POP		rcx				; Save number of bytes to read
+	
+	; Check that the file was opened, else throw an error
+	TEST	rax, rax
+	JL		_open_file_err	
+
+	MOV		rbx, rax		; Map File
+	PUSH	0x0				; Start location
+_read:
+	PUSH	rcx				; Save current number of bytes remaining
+
+	XOR		rax, rax		; Read syscall value
+	MOV		rdi, rbx		; Map file
+	MOV		rsi, map_char	; Location to store read char
+	MOV		rdx, 0x1		; Number of char's to read, this case just 1
+	SYSCALL
+
+	; Checking that the file was read, else throws an error
+	TEST	rax, rax
+	JL		_read_file_err	
+
+	MOV		rcx, [map_char]
+	CMP		rcx, 0xa		; Is current char '\n'
+	JE		_new_line
+
+	CMP		rcx, 0x0		; Is current char '\0'
+	JE		_close
+	
+	CMP		rcx, 'S'		; Is current char 'S'
+	JNE		_place_char
+
+_set_start:
+	; If the current char is an 'S', set starting cursor position
+	POP		rcx
+	POP		rdi
+	MOV		rdi, r15		; currY
+	SHL		rdi, 32			; Set upper 32 bits to be the y coord
+	OR		rdi, r13		; Set the lower 32 bits to be the x coord
+	PUSH	rdi
+	PUSH	rcx
+
+_place_char:
+	; mvwaddch(Window, y, x, char)
+	MOV		rdi, r12		; Window
+	MOV		rsi, r15		; currY
+	MOV		rdx, r13		; currX
+	MOV		rcx, [map_char]	; char
+	CALL	mvwaddch		; Adding the character to the terminal display
+
+	ADD		r13, 1			; currX += 1
+	POP		rcx				; Restore number of bytes left to print
+	LOOP	_read			; Draw next character in file
+	JMP		_close
+
+_new_line:
+	; Resets X position to initial position and increases y position by 1
+	MOV		r13, r14		; currX = origX
+	ADD		r15, 1			; currY = origY
+	POP		rcx				; Restore number of bytes left to print
+	LOOP	_read			; Draw next character in file
+
+_close:
+	; Setting the cursor position
+	POP		rax				; 64 bit number, Upper 32 bits - y pos and lower 32 bits - x pos
+	MOV		rsi, rax		; 64 bit y pos
+	MOV		rdx, rax		; 64 bit x pos
+
+	MOV		rdi, r12		; Window
+	SHR		rsi, 32			; 32 bit y pos
+	AND		rdx, 0xffffff	; 32 bit x pos
+	CALL	wmove			; move cursor to start position
+
+	; Closing the file
+	MOV		rax, 0x3		; Syscall close value
+	MOV		rdi, rbx		; File descriptor saved on line 16
+	SYSCALL
+
+	; Checking to make sure the file was actually close, otherwise throw an error
+	TEST	rax, rax
+	JL		_close_file_err	
+
+	; Restore the stack and restore non-volatile registers used by caller
+	POP		r15
+	POP		r14
+	POP		r13
+	POP		r12
+	XOR		rax, rax	
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Error Handlers Below
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .data
 	open_err_msg:		db "File Open Error", 0xa, 0x0
 	open_err_msg_len:	equ $ - open_err_msg
@@ -10,124 +133,13 @@ section .data
 	close_err_msg:		db "File Close Error", 0xa, 0x0
 	close_err_msg_len:	equ $ - close_err_msg
 
-	file_buffer_len:	equ 1282 ; (# rows + 1) * (# cols): Map = 60 col x 21 row
-
-section .bss
-	file_buffer:		resb 1283
-
-
-section .text
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Parameters:	rdi - Window*
-;				rsi - Map File
-;				rdx - X location
-;				rcx - Y location
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-_render_map:
-	; Saving the registers that are non-volatile
-	PUSH	r12
-	PUSH	r13
-	PUSH	r14
-	PUSH	r15
-	PUSH	rbx
-
-	PUSH	rdi
-	PUSH	rdx
-	PUSH	rcx
-
-	; Opening the file
-	MOV		rdi, rsi
-	MOV		rax, 0x2
-	MOV		rsi, 0x0
-	MOV		rdx, 0x0
-	SYSCALL
-
-	push	rax				; Save file descriptor
-	TEST	rax, rax
-	JL		_open_file_err	; Will restore the stack
-
-	; Reading the file into a buffer
-	MOV		rdi, rax
-	MOV		rax, 0x0
-	MOV		rsi, file_buffer
-	MOV		rdx, file_buffer_len
-	SYSCALL
-
-	TEST	rax, rax
-	JL		_read_file_err	; Will restore the stack
-
-	; Closing the file
-	MOV		rax, 0x3
-	POP		rdi				; File descriptor saved on line 16
-	SYSCALL
-
-	TEST	rax, rax
-	JL		_close_file_err	; Will restore the stack
-
-	; Creating Ncurses screen based off file buffer
-	POP		r12			; currY
-	POP		r13			; currX
-	POP		rbx			; Window
-	MOV		r14, r13	; origX
-	MOV		r15, file_buffer
-	MOV		rcx, 0x0	; Start position
-
-_load_buffer:
-	XOR		rax, rax
-	MOV		al, [r15]; Set lower 8 bits to the char at head of buffer
-
-	CMP		rax, 0xa	; If new line increase Y coord and reset X coord
-	JE		_new_line
-
-	CMP		rax, 0x0	; If end of buffer, exit render and return to callee
-	JE		_finish_load
-
-	CMP		rax, 'S'
-	JNE		_place_char
-
-_set_start:
-	; Sets the starting point, which will be returned
-	MOV		rcx, r13	
-	SHR		rcx, 32		; Shift right by 32 bits, upper 32 bits are x loc
-	OR		rcx, r12	; Lower 32 bits are the y loc
-
-_place_char:
-	PUSH	rcx
-	; mvwaddch(Window, y, x, char)
-	MOV		rdi, rbx	; Window
-	MOV		rsi, r12	; currY
-	MOV		rdx, r13	; currX
-	MOV		rcx, rax	; char
-	CALL	mvwaddch
-	
-	POP		rcx
-	ADD		r13, 1		; currX + 1
-	ADD		r15, 1		; next char in buffer
-	JMP		_load_buffer
-
-	
-_new_line:
-	MOV		r13, r14	; currX = origX
-	ADD		r12, 1		; currY = origY
-	ADD		r15, 1		; Next character in map buffer
-	JMP		_load_buffer
-
-_finish_load:
-	POP		rbx
+_open_file_err:
+	; Restore stack and non-volatile registers
 	POP		r15
 	POP		r14
 	POP		r13
 	POP		r12
-	MOV		rax, rcx
-	RET
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Error Handlers Below
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-_open_file_err:
-	MOV		rsi, 32
-	SUB		rsp, 0x4
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
 	MOV		rsi, open_err_msg
@@ -138,8 +150,13 @@ _open_file_err:
 	RET
 
 _read_file_err:
-	MOV		rsi, 32
-	SUB		rsp, 0x4
+	; Restore stack and non-volatile registers
+	ADD		rsp, 0x16
+	POP		r15
+	POP		r14
+	POP		r13
+	POP		r12
+
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
 	MOV		rsi, read_err_msg
@@ -150,7 +167,12 @@ _read_file_err:
 	RET
 
 _close_file_err:
-	MOV		rsi, 24
+	; Restore stack and non-volatile registers
+	POP		r15
+	POP		r14
+	POP		r13
+	POP		r12
+
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
 	MOV		rsi, close_err_msg
@@ -159,6 +181,3 @@ _close_file_err:
 
 	MOV		rax, 0x1
 	RET
-
-
-	
