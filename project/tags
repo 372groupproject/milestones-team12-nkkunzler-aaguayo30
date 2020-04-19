@@ -1,0 +1,65 @@
+%.o	Makefile	/^%.o: %.asm$/
+.PHONY	Makefile	/^.PHONY: clean$/
+ASM	Makefile	/^ASM = ..\/bin\/nasm$/
+ASMFLAGS	Makefile	/^ASMFLAGS = -g -f elf64$/
+EXEC	Makefile	/^EXEC = $(basename $(wildcard *.asm))$/
+EXEC	Makefile	/^EXEC = ""$/
+LD	Makefile	/^LD = ld$/
+LDFLAGS	Makefile	/^LDFLAGS = -g -dynamic-linker \/lib64\/ld-linux-x86-6/
+MMakefile	Makefile	/^main: clean $(OBJ)$/
+Mwindow	window.c	/^int main() {$/
+Ncurses	README.md	8
+OBJ	Makefile	/^OBJ = $(TARGET).o map_render.o$/
+SRC	Makefile	/^SRC = $(TARGET).asm$/
+TARGET	Makefile	/^TARGET = $(MAKECMDGOALS)$/
+_close_file	load_map.asm	/^_close_file:$/
+_close_file_err	load_map.asm	/^_close_file_err:$/
+_close_file_err	map_render.asm	/^_close_file_err:$/
+_finish_load	map_render.asm	/^_finish_load:$/
+_load_buffer	map_render.asm	/^_load_buffer:$/
+_new_line	map_render.asm	/^_new_line:$/
+_open_file	load_map.asm	/^_open_file:$/
+_open_file_err	load_map.asm	/^_open_file_err:$/
+_open_file_err	map_render.asm	/^_open_file_err:$/
+_read_file	load_map.asm	/^_read_file:$/
+_read_file_err	load_map.asm	/^_read_file_err:$/
+_read_file_err	map_render.asm	/^_read_file_err:$/
+_render_map	load_map.asm	/^_render_map:$/
+_render_map	map_render.asm	/^_render_map:$/
+_render_map_char	load_map.asm	/^_render_map_char:$/
+_render_map_loop	load_map.asm	/^_render_map_loop:$/
+_render_new_line	load_map.asm	/^_render_new_line:$/
+_start	load_map.asm	/^_start:$/
+_start	main.asm	/^_start:$/
+_start	t.asm	/^_start:$/
+all	Makefile	/^all:$/
+clean	Makefile	/^clean:$/
+extern	load_map.asm	/^extern initscr$/
+extern	load_map.asm	/^extern cbreak$/
+extern	load_map.asm	/^extern noecho$/
+extern	load_map.asm	/^extern getch$/
+extern	load_map.asm	/^extern endwin$/
+extern	load_map.asm	/^extern mvaddch$/
+extern	main.asm	/^extern initscr$/
+extern	main.asm	/^extern refresh$/
+extern	main.asm	/^extern cbreak$/
+extern	main.asm	/^extern noecho$/
+extern	main.asm	/^extern mvaddch$/
+extern	main.asm	/^extern getch$/
+extern	main.asm	/^extern endwin$/
+extern	map_render.asm	/^extern mvwaddch$/
+global	load_map.asm	/^global _start$/
+global	main.asm	/^global _start$/
+global	t.asm	/^global _start$/
+section	load_map.asm	/^section .data$/
+section	load_map.asm	/^section .bss$/
+section	load_map.asm	/^section .text$/
+section	load_map.asm	/^section .data$/
+section	load_map.asm	/^section .text$/
+section	main.asm	/^section .data$/
+section	main.asm	/^section .text$/
+section	map_render.asm	/^section .data$/
+section	map_render.asm	/^section .bss$/
+section	map_render.asm	/^section .text$/
+section	t.asm	/^section .data$/
+section	t.asm	/^section .text$/
