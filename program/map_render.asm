@@ -14,6 +14,7 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _render_map:
 	; Saving the registers that are non-volatile
+	PUSH	rbx
 	PUSH	r12
 	PUSH	r13
 	PUSH	r14
@@ -117,6 +118,7 @@ _close:
 	POP		r14
 	POP		r13
 	POP		r12
+	POP		rbx
 	XOR		rax, rax	
 	RET
 
@@ -139,6 +141,7 @@ _open_file_err:
 	POP		r14
 	POP		r13
 	POP		r12
+	POP		rbx
 
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
@@ -156,6 +159,7 @@ _read_file_err:
 	POP		r14
 	POP		r13
 	POP		r12
+	POP		rbx
 
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
@@ -172,6 +176,7 @@ _close_file_err:
 	POP		r14
 	POP		r13
 	POP		r12
+	POP		rbx
 
 	MOV		rax, 0x1
 	MOV		rdi, 0x1
