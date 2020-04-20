@@ -6,12 +6,13 @@ or enemy players.
 
 ## Usage
 
-### <ins>Render a File to Ncurses</ins>
-* To start the game run:
+* To start the game run:  
 ```make main && ./main```
 
-## TODO
-
-## Complete
-
-
+## Goals
+- [ ] Create a menu selection or way to start the game
+- [X] Read a map text file and render to terminal screen
+  - [ ] Center the map
+- [ ] Create a character that can move around the map
+- [ ] Create an enemy that chases after the player's character
+- [ ] Create a win/lose screen or message
