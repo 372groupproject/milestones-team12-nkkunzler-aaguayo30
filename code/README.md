@@ -41,6 +41,16 @@ Note: This may also cause a segmentation fault (Jump may work depending on statu
 * To run the p3_seg_fault.asm program, use:  
 ```make p3_seg_fault && ./p3_seg_fault```
 
+### <ins>Milestone 4</ins>
+* To run the p4_procedures.asm program, use:  
+```make p4_procedures && ./p4_procedures```  
+
+* To run the p4_local_procedures.asm program, use:  
+```make p4_local_procedures && ./p4_local_procedures```  
+
+* To run the p4_external.asm program, use:  
+```make p4_external && ./p4_external```  
+
 ## Authors
 Angel Aguayo  
 Nicholas Kunzler

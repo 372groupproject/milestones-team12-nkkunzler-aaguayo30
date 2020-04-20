@@ -44,6 +44,17 @@ Milestone 3
 	- To run the p3_seg_fault.asm program, use:
 	$ make p3_seg_fault && ./p3_seg_fault$ 
 
+Milestone 4
+-----------
+	- To run the p4_procedures.asm program, use:
+	  $ make p4_procedures && ./p4_procedures
+
+	- To run the p4_local_procedures.asm program, use:
+	  $ make p4_local_procedures && ./p4_local_procedures
+
+	- TO run the p4_external.asm program, use:
+	  $ make p4_external && ./p4_external
+
 Authors
 =======
 Angel Aguayo  

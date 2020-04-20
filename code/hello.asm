@@ -10,7 +10,7 @@ _start:
 	; Print Hello World
 	mov		rdi, 0x1		; print a string
 	mov		rsi, msg		; print message
-	mov		rdx, msg_len	; String length
+	mov		rdx, 0x1		; String length
 	mov 	rax, 0x1		; syscall for printing
 	syscall
 	
