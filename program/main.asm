@@ -22,7 +22,8 @@ extern box
 
 section .data
 	map:		db "map1.txt", 0x0
-	map_size	equ 1282	; Size = (# ROWS + 1) * (# Cols)
+	map_width	equ 60
+	map_height	equ 21
 
 section .text
 global _start
@@ -33,21 +34,40 @@ _start:
 	CALL	cbreak
 	CALL	noecho
 
+	; Getting main window maximum size
+	; Could just use getmaxyx() but that is not fun
+	
+	; Get Y position for the map
+	MOV		r9, -map_height
+	SHR		r9, 1			; half map height
+
+	MOV		r8, [rbx+4]
+	AND		r8, 0xffff
+	SHR		r8, 1		
+	ADD		r8, r9
+
+	; Get X position for the map
+	MOV		r9, -map_width
+	SHR		r9, 1			; half map height
+
+	MOV		rcx, [rbx+6]
+	AND		rcx, 0xffff
+	SHR		rcx, 1			; X
+	ADD		rcx, r9
+
+	; Get the number of bytes to read based off of width and height
+	MOV		rax, map_width
+	MOV		rdx, map_height
+	MUL		rdx
+	MOV		rdx, rax
+
+	; Rendering the map to terminal screen
 	MOV		rdi, rbx
 	MOV		rsi, map	; The map to load
-	MOV		rdx, map_size
-	MOV		rcx, 15 	; X loc of map
-	MOV		r8, 10		; Y loc of map
 	CALL	_render_map	; Draws the map to the terminal and set cursor to start
 
 	TEST	rax, rax
 	JL		_exit_error
-
-	; Draws a border around the window
-	;MOV		rdi, rbx
-	;MOV		rsi, '|'
-	;MOV		rdx, '`'
-	;CALL	box
 
 	CALL	getch
 	CALL	endwin
