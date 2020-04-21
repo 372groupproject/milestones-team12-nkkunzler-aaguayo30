@@ -51,8 +51,9 @@ Note: This may also cause a segmentation fault (Jump may work depending on statu
 * To run the p4_external.asm program, use:  
 ```make p4_external && ./p4_external```  
 
-* To run the p4_feature.asm program, use:
+* To run the p4_feature.asm program, use:  
 ```make p4_feature && ./p4_feature```
+[Sorts and prints the lowest value in the list]
 
 ## Authors
 Angel Aguayo  
