@@ -67,6 +67,7 @@ _set_start:
 	; If the current char is an 'S', set starting cursor position
 	POP		rcx
 	POP		rdi
+	XOR		rdi, rdi
 	MOV		rdi, r15		; currY
 	SHL		rdi, 32			; Set upper 32 bits to be the y coord
 	OR		rdi, r13		; Set the lower 32 bits to be the x coord

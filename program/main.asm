@@ -15,10 +15,8 @@ extern initscr
 extern refresh
 extern cbreak
 extern noecho
-extern mvaddch
 extern getch
 extern endwin
-extern box
 
 section .data
 	map:		db "map1.txt", 0x0
@@ -38,22 +36,22 @@ _start:
 	; Could just use getmaxyx() but that is not fun
 	
 	; Get Y position for the map
-	MOV		r9, -map_height
+	MOV		r9, map_height
 	SHR		r9, 1			; half map height
 
 	MOV		r8, [rbx+4]
 	AND		r8, 0xffff
 	SHR		r8, 1		
-	ADD		r8, r9
+	SUB		r8, r9
 
 	; Get X position for the map
-	MOV		r9, -map_width
+	MOV		r9, map_width
 	SHR		r9, 1			; half map height
 
 	MOV		rcx, [rbx+6]
 	AND		rcx, 0xffff
 	SHR		rcx, 1			; X
-	ADD		rcx, r9
+	SUB		rcx, r9
 
 	; Get the number of bytes to read based off of width and height
 	MOV		rax, map_width
