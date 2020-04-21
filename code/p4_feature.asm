@@ -1,5 +1,5 @@
 section .data
-	nums	dw	69, 420, 42069 
+	nums	dw	69, 4206, 420
 	len		equ 3
 
 	new_line	db 	0xa
