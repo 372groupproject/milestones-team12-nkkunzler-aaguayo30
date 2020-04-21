@@ -1,94 +1,73 @@
+section .data
+	nums	dw	69, 420, 42069 
+	len		equ 3
 
+	new_line	db 	0xa
 
-section		.data
-		nums		dq		420, 69, 4, 20, 6969, 69420, 42060
-		len			equ		$ - nums
-		new_line	db		0xa
-	
+section .bss
+	buffer	resb 33
 
-section		.bss
-		buffer		resq	33
-
-
-section		.text
-
-global		_start
-
+section .text
+global _start
 
 _start:
-		mov		rdi, nums
-		call 	_insertsort
 
+_insertionSort:
+	xor		r12, r12	; i
+	mov		r13, 0x0	; j
 
-_print:
-		mov		rdi, 1235
-		call 	_itoa			
+_for_loop:
+	add		r12, 0x1
+	cmp		r12, len	; i > n
+	jge		_p_end
 
-		; Printing out the newly created integer string
-		mov		rsi, buffer
-		mov		rax, 0x1
-		mov		rdi, 0x1
-		mov		rdx, 33
-		syscall
+	mov		r14, [nums+r12]; val = nums[i]
 
-		; Printing a new line
-		mov		rax, 0x1
-		mov		rdi, 0x1
-		mov		rsi, new_line
-		mov		rdx, 0x1
-		syscall					
+	mov		r13, r12	; j = i
+	sub		r13, 1		; j = i - 1
 
-		; Exit
-		mov		rax, 0x3c
-		xor		rdi, rdi
-		syscall
+_while_loop:
+	cmp		r13, 0			; j < 0
+	jmp		_for_loop
 
-_insertsort:
-		mov		r11, 1 				; i = 1
+	mov		r15, [nums+r12]
+	cmp		r14, r15
+	jge		_for_loop
 
+	add		r13, 1
+	mov		[nums+r13], r9
+	sub		r13, 1
 
-; for(int i=1; i<len; i++)
-_loop:
-		cmp		r11, len   			; if i >= len
-		jge		_print
-		
-		mov		r12, [rdi+r11*8]	; main element = array[i]
+	JMP		_while_loop
 
-		mov		r13, r11			
-		dec		r13					; j = i - 1
+	add		r13, 1
+	mov		[nums+r13], r15
+	sub		r13, 1
+	JMP		_for_loop
 
-; while ( j<=0 )
-;		if(array[j] <= array[i]
-			
-;			break
-;		array[j+1] = array[j]		
-;	
-_beginWhile:
-		cmp		r13, 0				; if j < 0
-		jl		_next	
+_p_end:
+	mov		rdi, [nums]
+	and		rdi, 0xffff
+	CALL	_itoa
 
-		mov		r14, [rdi + r13*8]	; temp = array[j]
-		cmp		r14, r12			; if temp <= main element
-		jng		_next
+	mov		rsi, buffer
+	mov		rax, 0x1
+	mov		rdi, 0x1
+	mov		rdx, 0x33
+	syscall
 
-		mov		[nums+r13*8+8], r14	; array[j+1] = array[j] 
-		dec		r13					; j --
-		jmp		_beginWhile
+	; Printing a new line
+	mov		rax, 0x1
+	mov		rdi, 0x1
+	mov		rsi, new_line
+	mov		rdx, 0x1
+	syscall
 
+	; Exit
+	mov		rax, 0x3c
+	xor		rdi, rdi
+	syscall
 
-;	array[j+1]= main element 
-;
-_next:
-		mov		[rdi + r13*8+8], r11 
-		
-		dec		r13					; j ++
-		
-
-		jmp		_beginWhile
-
-
-; Converts an integer value to a string
-; Not very optimized, can be better
 _itoa:
 	MOV		rax, rdi
 	XOR		rcx, rcx
