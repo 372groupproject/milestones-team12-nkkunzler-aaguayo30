@@ -52,8 +52,11 @@ Milestone 4
 	- To run the p4_local_procedures.asm program, use:
 	  $ make p4_local_procedures && ./p4_local_procedures
 
-	- TO run the p4_external.asm program, use:
+	- To run the p4_external.asm program, use:
 	  $ make p4_external && ./p4_external
+	  
+	- To run the p4_feature.asm program, use:
+	  $ make p4_feature && ./p4_feature
 
 Authors
 =======
