@@ -4,8 +4,6 @@ section .data
 
 section .bss
 	buffer		resb 33
-	;num_val		resb 33
-	
 
 section .text
 global _start
