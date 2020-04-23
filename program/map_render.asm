@@ -92,6 +92,7 @@ _new_line:
 	MOV		r13, r14		; currX = origX
 	ADD		r15, 1			; currY = origY
 	POP		rcx				; Restore number of bytes left to print
+	ADD		rcx, 1			; Do not count a \n as part of map
 	LOOP	_read			; Draw next character in file
 
 _close:

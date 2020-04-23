@@ -30,7 +30,7 @@ section .data
 
 	map:		db "map1.txt", 0x0
 	map_width	equ 60
-	map_height	equ 21
+	map_height	equ 18
 
 section .text
 global _start
@@ -73,38 +73,49 @@ _start:
 _load_map:
 	CALL	refresh
 
-	; Get Y position for the map
-	MOV		r9, map_height
-	SHR		r9, 1			; half map height
+	; Get Y position for game map window
+	MOV		rdx, map_height	; RDX = y coord
+	SHR		rdx, 1			; Map height / 2
+
+	MOV		rdi, rbx		; Root window
+	CALL	_get_win_centerY; Center X position of root window
+	SUB		rax, rdx		; Game window y = (root_window_height / 2) - (map_height / 2)
+	MOV		rdx, rax		; RDX = y coord where the game window is centered in root window
+
+	; Get X position for game map window 
+	MOV		rcx, map_width	; RCX = x coord
+	SHR		rcx, 1			; Map width / 2
+
+	MOV		rdi, rbx		; Root window
+	CALL	_get_win_centerX; Center X coord of root window
+	SUB		rax, rcx		; Game window x = (root_window_width / 2) - (map_width / 2)
+	MOV		rcx, rax		; RCX = x coord where the game window is centered in root window
+
+	MOV		rdi, map_height	; Number of rows
+	MOV		rsi, map_width	; Number of columns
+	CALL	newwin
+	MOV		rbx, rax		; Game Window
 
 	MOV		rdi, rbx
-	CALL	_get_win_centerY
-	SUB		rax, r9
-	MOV		r8, rax
+	MOV		rsi, '|'
+	MOV		rdx, '*'
+	CALL	box
 
-	; Get X position for the map
-	MOV		r9, map_width
-	SHR		r9, 1			; half map height
-
-	MOV		rdi, rbx
-	CALL	_get_win_centerX
-	SUB		rax, r9
-	MOV		rcx, rax
-
-	; Get the number of bytes to read based off of width and height
+	; Calculate map size = (# Cols) * (# Rows)
 	MOV		rax, map_width
 	MOV		rdx, map_height
-	MUL		rdx
-	MOV		rdx, rax
+	MUL		rdx				; RAX = RDX * RAX
+	MOV		rdx, rax		; map_size
 
-	; Rendering the map to terminal screen
-	MOV		rdi, rbx
-	MOV		rsi, map	; The map to load
-	CALL	_render_map	; Draws the map to the terminal and set cursor to start
+	; Draw map on game window
+	MOV		rdi, rbx		; Game window
+	MOV		rsi, map		; The map to load
+	MOV		rcx, 0
+	MOV		r8, 0
+	CALL	_render_map		; Draws the map to the terminal and set cursor to start
 
-	TEST	rax, rax
+	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Player movement / Game loop here
@@ -122,6 +133,8 @@ _game_loop:
 	; Start of player movement
 	;
 
+	; Sorry just have to have vim movement for my sanity
+
 	CMP		rax, 's'		; S key for gamers
 	JE		.mv_player_down
 	CMP		rax, 'j'		; J key for vimers
@@ -129,11 +142,17 @@ _game_loop:
 
 	CMP		rax, 'w'
 	JE		.mv_player_up
+	CMP		rax, 'k'		
+	JE		.mv_player_up
 
 	CMP		rax, 'a'
 	JE		.mv_player_left
+	CMP		rax, 'h'	
+	JE		.mv_player_left
 
 	CMP		rax, 'd'
+	JE		.mv_player_right
+	CMP		rax, 'l'
 	JE		.mv_player_right
 
 	; Add other movements here
@@ -146,8 +165,6 @@ _game_loop:
 .mv_player_right:
 	MOV		rdi, rbx		; Window from which to move the cursor
 	MOV		rsi, 1			; Number of squares to jump each press
-	MOV		rdx, 0			; Minimum x value the plater can move to
-	MOV		rcx, 120		; Maximum y value the player can move to
 	CALL	_mov_cursor_x	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
@@ -156,8 +173,6 @@ _game_loop:
 .mv_player_left:
 	MOV		rdi, rbx		; Window from which to move the cursor
 	MOV		rsi, -1			; Number of squares to jump each press
-	MOV		rdx, 0			; Minimum x value the plater can move to
-	MOV		rcx, 49			; Maximum y value the player can move to
 	CALL	_mov_cursor_x	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
@@ -165,8 +180,6 @@ _game_loop:
 .mv_player_up:
 	MOV 	rdi, rbx
 	MOV		rsi, -1
-	MOV		rdx, 0
-	MOV		rcx, 49
 	CALL	_mov_cursor_y
 	JMP		_game_loop
 
@@ -174,8 +187,6 @@ _game_loop:
 .mv_player_down:
 	MOV		rdi, rbx		; Window from which to move the cursor
 	MOV		rsi, 1			; Number of square to jump each press
-	MOV		rdx, 0			; Minimum y value the player can move to
-	MOV		rcx, 49			; Miximum y value the player can move to
 	CALL	_mov_cursor_y	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 

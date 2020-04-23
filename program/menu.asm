@@ -87,7 +87,6 @@ _show_menu:
 	PUSH	r14
 	XOR		r14, r14		; selection
 
-
 .menu_item_loop:
 	MOV		rdi, rbx
 	MOV		rdx, r15

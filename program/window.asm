@@ -63,41 +63,13 @@ _get_win_centerY:
 ; Returns: Absolute number of spaces moved
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _mov_cursor_y:
-	PUSH	r12			; Used to determine how many spots from min index
-
 	PUSH	rdi
-	PUSH	rdx
-	PUSH	rcx
-	PUSH	rsi
 	CALL	getcury
-	POP		rsi
-	POP		rcx
-	POP		rdx
 	ADD		rax, rsi
 
-	; All of this is super buggy and weird, but should still move cursor as expected
-	CMP		rax, rdx		; y < min y 
-	JL		.mov_loop_max
-
-	CMP		rax, rcx		; y > max y
-	JGE		.mov_loop_min
-	
-	JMP		.mov_loop_mov
-
-.mov_loop_min:
-	MOV		rax, rdx
-	JMP		.mov_loop_mov
-
-.mov_loop_max:
-	MOV		rax, rcx
-
-.mov_loop_mov:
-	; Ignore this for now, trying something out
-	MOV		r12, rax
-	SUB		r12, rcx
 	POP		rdi
 	PUSH	rax
-	
+
 	; Get curr x position
 	PUSH	rdi
 	CALL	getcurx
@@ -107,9 +79,6 @@ _mov_cursor_y:
 	
 	; Move position to new location
 	CALL	wmove
-
-	MOV		rax, r12
-	POP		r12
 	RET
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -120,33 +89,9 @@ _mov_cursor_y:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _mov_cursor_x:
 	PUSH	rdi
-	PUSH	rdx
-	PUSH	rcx
-	PUSH	rsi
 	CALL	getcurx
-	POP		rsi
-	POP		rcx
-	POP		rdx
 	ADD		rax, rsi
 
-	; All of this is super buggy and weird, but should still move cursor as expected
-	CMP		rax, rdx		; x < min x
-	JLE		.mov_loop_max
-
-	CMP		rax, rcx		; x > max x
-	JGE		.mov_loop_max
-
-	JMP		.mov_loop_mov
-
-.mov_loop_min:
-	ADD		rax, 1
-	JMP		.mov_loop_mov
-
-.mov_loop_max:
-	SUB		rax, 1
-	MOV		rax, rdx
-
-.mov_loop_mov:
 	POP		rdi
 	PUSH	rax
 	
