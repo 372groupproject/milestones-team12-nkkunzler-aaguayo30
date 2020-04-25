@@ -24,10 +24,24 @@ extern mvaddch
 extern wtimeout
 
 section .data
-	title		db "GAME TITLE", 0x0
+	title			db "GAME TITLE", 0x0
+	play_str		db "PLAY", 0x0
 
-	play_str	db "PLAY", 0x0
-	exit_str	db "EXIT", 0x0
+	win_str			db "YOU WON!", 0x0
+	lose_str		db "YOU LOST", 0x0
+	play_again_str	db "PLAY AGAIN", 0x0
+
+	pause_str		db "PAUSE", 0x0
+	resume_str		db "RESUME", 0x0
+
+	info_str		db "INFO", 0x0
+	goal_info_str	db "Reach the 'E' marked on the map without being attacked.", 0x0
+	mv_key_info_str	db "The player controllers use standard AWSD keys or HJKL.", 0x0
+	ex_key_info_str db "To pause the game press the 'p' key.", 0x0
+	hint_str		db "Hint: Holding the keys will increase the players speed.", 0x0
+	credit_str		db "Created by: Angel Aguayo and Nicholas Kunzler", 0x0
+
+	exit_str		db "EXIT", 0x0
 
 	map:		db "map2.txt", 0x0
 	map_width	equ 101
@@ -37,11 +51,17 @@ section .text
 global _start
 
 _start:
+	PUSH	rbp
+	MOV		rbp, rsp
+
+	SUB		rsp, 0x8		; root screen
+
 	CALL	initscr
-	MOV		rbx, rax
+	MOV		[rbp-0x8], rax
 	CALL	cbreak
 	CALL	noecho
 
+_load_main_menu:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Load the main menu system
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -51,20 +71,44 @@ _start:
 	; All the menu items are stored on the stack and not within the
 	; standared registers
 	; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	MOV		rdi, rbx		; Window to which to render menu
+	MOV		rdi, [rbp-0x8]	; Window to which to render menu
 	MOV		rsi, title		; Title for the menu, currently not working
-	MOV		rcx, 2			; Number of menu items
-	PUSH	exit_str		; Last menu item
+	MOV		rcx, 3			; Number of menu items
+	PUSH	exit_str		; Middle menu item
+	PUSH	info_str		; Last menu item
 	PUSH	play_str		; First menu item
 	CALL	_show_menu
 
 	CMP		rax, 0x0		; First list item selected, PLAY
 	JE		_load_map		
 
-	CMP		rax, 0x1		; Second list item selected, EXIT
+	CMP		rax, 0x1		; Second list item selected, INFO
+	JE		_load_info_menu
+
+	CMP		rax, 0x2		; Second list item selected, EXIT
 	JE		_exit_success
 
 	JMP		_exit_error		; Strange selection is an error
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Creates a new Info window that tells a little about how
+; to move around in the game, gives a movement hint, and
+; how to pause the game, and of course given credit to the
+; creators, use.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_load_info_menu:
+	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rsi, info_str	; Title for the menu, currently not working
+	MOV		rcx, 5			; Number of menu items
+	PUSH	credit_str
+	PUSH	hint_str
+	PUSH	ex_key_info_str
+	PUSH	mv_key_info_str
+	PUSH	goal_info_str
+	CALL	_show_menu
+
+	JMP		_load_main_menu
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Loading the map the player will run on
@@ -76,7 +120,7 @@ _load_map:
 	MOV		rdx, map_height	; RDX = y coord
 	SHR		rdx, 1			; Map height / 2
 
-	MOV		rdi, rbx		; Root window
+	MOV		rdi, [rbp-0x8]	; Root window
 	CALL	_get_win_centerY; Center X position of root window
 	SUB		rax, rdx		; Game window y = (root_window_height / 2) - (map_height / 2)
 	MOV		rdx, rax		; RDX = y coord where the game window is centered in root window
@@ -85,7 +129,7 @@ _load_map:
 	MOV		rcx, map_width	; RCX = x coord
 	SHR		rcx, 1			; Map width / 2
 
-	MOV		rdi, rbx		; Root window
+	MOV		rdi, [rbp-0x8]	; Root window
 	CALL	_get_win_centerX; Center X coord of root window
 	SUB		rax, rcx		; Game window x = (root_window_width / 2) - (map_width / 2)
 	MOV		rcx, rax		; RCX = x coord where the game window is centered in root window
@@ -94,11 +138,6 @@ _load_map:
 	MOV		rsi, map_width	; Number of columns
 	CALL	newwin
 	MOV		rbx, rax		; Game Window
-
-	;MOV		rdi, rbx
-	;MOV		rsi, '|'
-	;MOV		rdx, '*'
-	;CALL	box
 
 	; Calculate map size = (# Cols) * (# Rows)
 	MOV		rax, map_width
@@ -126,6 +165,7 @@ _load_map:
 	MOV		rdi, rbx
 	MOV		rsi, 100
 	CALL	wtimeout	
+
 _game_loop:
 	MOV		rdi, rbx		; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
@@ -135,7 +175,10 @@ _game_loop:
 	MOV		r12, rax
 	
 	CMP		r12, 0xa		; If user input is new line, exit game
-	JE		_exit_success
+	JE		_menus.show_lose_menu
+
+	CMP		r12, 'p'
+	JE		_menus.show_pause_menu
 
 .move_player:
 
@@ -199,6 +242,84 @@ _game_loop:
 	CALL	_mov_cursor_y	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
+_menus:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Displays a new pause window that will prompt the user
+; to either resume the game play or to exit the game.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.show_pause_menu:
+	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rsi, pause_str	; Title for the pause menu
+	MOV		rcx, 2			; Number of menu items
+	PUSH	exit_str		; Last menu item
+	PUSH	resume_str		; First menu item
+	CALL	_show_menu
+	
+	CMP		rax, 0x0		; First list item selected, RESUME
+	JE		_game_loop.mv_player_left
+
+	CMP		rax, 0x1		; Second list item selected, EXIT
+	JE		_end_game
+	JMP		_exit_error		; Strange selection is an error
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Displays a new win window that indicates to the user that
+; they have won the game. They are given the option to play
+; again or to exit the game.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.show_win_menu:
+	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rsi, win_str	; Title for the win menu
+	MOV		rcx, 2			; Number of menu items
+	PUSH	exit_str		; Last menu item
+	PUSH	play_again_str	; First menu item
+	CALL	_show_menu
+
+	CMP		rax, 0x0		; First list item selected, PLAY AGAIN
+	JE		_restart
+
+	CMP		rax, 0x1		; Second list item selected, EXIT
+	JE		_end_game
+
+	JMP		_exit_error		; Strange selection is an error
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Displays a new win window that indicates to the user that
+; they have lost the game. They are given the option to play
+; again or to exit the game.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.show_lose_menu:
+	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rsi, lose_str	; Title for the lose menu
+	MOV		rcx, 2			; Number of menu items
+	PUSH	exit_str		; Last menu item
+	PUSH	play_again_str	; First menu item
+	CALL	_show_menu
+
+	CMP		rax, 0x0		; First list item selected, PLAY AGAIN
+	JE		_restart
+
+	CMP		rax, 0x1		; Second list item selected, EXIT
+	JE		_end_game
+
+	JMP		_exit_error		; Strange selection is an error
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Destroys the current game window and will rerender the game
+; board representing a restart.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_restart:
+	mov		rdi, rdx
+	CALL	endwin
+	JE		_load_map
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Destroys the current game window and then exits the program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_end_game:
+	mov		rdi, rdx
+	CALL	endwin
+	; Falls through to exit_success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Code to exit the program
@@ -226,6 +347,8 @@ _exit_success:
 	MOV		rdx, suc_msg_len
 	SYSCALL
 
+	LEAVE		; restoring the stack
+
 	; Exit with error code 0
 	MOV		rax, 0x3c
 	XOR		rdi, rdi
@@ -240,6 +363,8 @@ _exit_error:
 	MOV		rsi, err_msg
 	MOV		rdx, err_msg_len
 	SYSCALL
+
+	LEAVE		; restoring the stack
 
 	; Exit with error code 1
 	MOV		rax, 0x3c

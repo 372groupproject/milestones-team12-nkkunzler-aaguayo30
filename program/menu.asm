@@ -1,12 +1,12 @@
-extern wmove
-extern wattron
-extern wattroff
 extern box
-extern wgetch
-extern newwin
-extern delwin
 extern mvwprintw
-extern wprintw
+extern wgetch
+extern delwin
+extern werase
+extern wrefresh
+
+section .data
+	print_fmt	db "%s", 0x0
 
 section .text
 
@@ -27,7 +27,6 @@ _show_menu:
 	PUSH	r12
 	PUSH	r13
 	PUSH	r15
-
 	MOV		rbx, rdi	; Root window
 	MOV		r12, rsi	; Menu Title
 	MOV		r13, rcx	; Num of menu options
@@ -66,21 +65,21 @@ _show_menu:
 	CALL	box
 
 	; Getting title length
-	MOV		rdx, r15
-	MOV		rdi, r12
-	;CALL	.str_len
-	SHR		rax, 1		; Half the string length
-	SUB		rdx, rax
-	
+_B1:
 	; Printing the title of the menu
 	MOV		rdi, rbx
 	MOV		rsi, 0x1	; y coord
-	MOV		rcx, r12
-	;CALL	mvwprintw
+	MOV		rdx, 0x2
+	MOV		rcx, print_fmt
+	MOV		r8, r12
+	CALL	mvwprintw
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Starting the render of the menu options
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;MOV		rdi, rbx
+	;MOV		rsi, 0x5
+	;CALL 	wattrset
 .menu_item:
 	CMP		r13, 0x0		; Make sure that number of items is not zero
 	JLE		.menu_end
@@ -93,10 +92,11 @@ _show_menu:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_item_loop:
 	MOV		rdi, rbx		; Window to print to
-	MOV		rdx, r15		; Center x of window
 	MOV		rsi, r12		; Y offset from first item in list (1*item_num)
 	ADD		rsi, 2			; Number of terminal lines between the title and start of items
-	MOV		rcx, [rbp+(r12+1)*8] ; Getting the item from the stack, which was pushed by the caller
+	MOV		rdx, 0x2
+	MOV		rcx, print_fmt
+	MOV		r8, [rbp+(r12+1)*8] ; Getting the item from the stack, which was pushed by the caller
 	CALL	mvwprintw
 
 	SUB		r12, 1			; Y offset moving up one terminal row
@@ -163,6 +163,12 @@ _show_menu:
 
 .menu_end:
 	MOV		rdi, rbx
+	CALL	werase
+
+	MOV		rdi, rbx
+	CALL	wrefresh
+
+	MOV		rdi, rbx
 	CALL	delwin
 	
 	; Restore saved non-volatile registers
@@ -177,9 +183,9 @@ _show_menu:
 	POP		r13
 	POP		r12
 	POP		rbx
-	
+
 	ADD		rsp, rax		; Restoring stack to remove menu item params
-	MOV		rax, rdi		; Return the selected menu item
+	MOV		rax, rdi
 	LEAVE
 	RET		
 
