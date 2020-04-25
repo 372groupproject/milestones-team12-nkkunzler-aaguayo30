@@ -59,8 +59,6 @@ _get_win_centerY:
 ;				rsi - Direction and space to move (- down, + up)
 ;				rdx - Min y coord
 ;				rcx - Max y coord	
-;
-; Returns: Absolute number of spaces moved
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _mov_cursor_y:
 	PUSH	rdi

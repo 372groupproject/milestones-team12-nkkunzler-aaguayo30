@@ -1,6 +1,9 @@
 extern mvwaddch
 extern wmove
 
+section .text
+	err db "easports", 0x0
+
 section .bss
 	map_char:	resb 1
 
@@ -13,35 +16,49 @@ section .text
 ;				r8 	- Y location
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _render_map:
+	PUSH	rbp
+	MOV		rbp, rsp
+
+	; Storing parameters on the stack
+	SUB		rsp, 24
+	MOV		[rbp-8], rdi	; Window to render to
+	MOV		[rbp-16], rcx	; Game map X position in window
+	MOV		QWORD [rbp-24], 0x0	; Starting position
+
+
+
 	; Saving the registers that are non-volatile
 	PUSH	rbx
-	PUSH	r12
 	PUSH	r13
-	PUSH	r14
 	PUSH	r15
-	PUSH	rdx				; Number of bytes to read
-	MOV		r12, rdi		; Window *
+	PUSH	rdx				; Number of bits of the map to read
+
 	MOV		r13, rcx		; X Location
-	MOV		r14, rcx		; Original X Location
 	MOV		r15, r8			; Y Location
 
-	; Opening the file
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Opening the specified file
+; Sets the rax register to file descriptor
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	MOV		rdi, rsi		; File Name
 	MOV		rax, 0x2		
 	XOR		rsi, rsi
 	XOR		rdx, rdx
 	SYSCALL
-
-	POP		rcx				; Save number of bytes to read
+	MOV		rbx, rax		; Open file descriptor
 	
-	; Check that the file was opened, else throw an error
-	TEST	rax, rax
+	TEST	rax, rax		; Making sure file was able to be opened
 	JL		_open_file_err	
 
-	MOV		rbx, rax		; Map File
-	PUSH	0x0				; Start location
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Reading the file and transcribing the ASCII characters
+; to the terminal through the use of ncurses
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	POP		rcx				; Number of bits in the file to read
+_b3:
 _read:
-	PUSH	rcx				; Save current number of bytes remaining
+	PUSH	rcx				; Save current bits read from the file
 
 	XOR		rax, rax		; Read syscall value
 	MOV		rdi, rbx		; Map file
@@ -49,34 +66,38 @@ _read:
 	MOV		rdx, 0x1		; Number of char's to read, this case just 1
 	SYSCALL
 
-	; Checking that the file was read, else throws an error
-	TEST	rax, rax
+	TEST	rax, rax		; Check if a character was actually read
 	JL		_read_file_err	
 
 	MOV		rcx, [map_char]
+_b2:
 	CMP		rcx, 0xa		; Is current char '\n'
 	JE		_new_line
 
 	CMP		rcx, 0x0		; Is current char '\0'
-	JE		_close
+	JE		_render_end
 	
 	CMP		rcx, 'S'		; Is current char 'S'
 	JNE		_place_char
 
+;;;;;;;;;;;;;;;;;;;;;;;;
+; Stores cursor position of where the S, indicating start
+; position is within the file. This will be returned after
+; rendering is complete. 
+;;;;;;;;;;;;;;;;;;;;;;;;
 _set_start:
 	; If the current char is an 'S', set starting cursor position
-	POP		rcx
-	POP		rdi
-	XOR		rdi, rdi
-	MOV		rdi, r15		; currY
-	SHL		rdi, 32			; Set upper 32 bits to be the y coord
-	OR		rdi, r13		; Set the lower 32 bits to be the x coord
-	PUSH	rdi
-	PUSH	rcx
+	MOV		rcx, r15		; currY
+	SHL		rcx, 32			; Set upper 32 bits to be the y coord
+	OR		rcx, r13		; Set the lower 32 bits to be the x coord
+	MOV		[rbp-24], rcx	; Save result of position
 
+;;;;;;;;;;;;;;;;;;;;;;;;
+; Placing the character read from the _read body on the terminal
+;;;;;;;;;;;;;;;;;;;;;;;;
 _place_char:
 	; mvwaddch(Window, y, x, char)
-	MOV		rdi, r12		; Window
+	MOV		rdi, [rbp-8]	; Window
 	MOV		rsi, r15		; currY
 	MOV		rdx, r13		; currX
 	MOV		rcx, [map_char]	; char
@@ -85,27 +106,35 @@ _place_char:
 	ADD		r13, 1			; currX += 1
 	POP		rcx				; Restore number of bytes left to print
 	LOOP	_read			; Draw next character in file
-	JMP		_close
+	JMP		_render_end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Moves the cursor y position down one terminal row
+; and resets the x position to the specified x parameter
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _new_line:
 	; Resets X position to initial position and increases y position by 1
-	MOV		r13, r14		; currX = origX
+	MOV		r13, [rbp-16]	; currX = origX
 	ADD		r15, 1			; currY = origY
 	POP		rcx				; Restore number of bytes left to print
-	ADD		rcx, 1			; Do not count a \n as part of map
+	ADD		rcx, 1
 	LOOP	_read			; Draw next character in file
 
-_close:
+_render_end:
 	; Setting the cursor position
-	POP		rax				; 64 bit number, Upper 32 bits - y pos and lower 32 bits - x pos
+	MOV		rax, [rbp-24]	; (y, x) position of start. Upper 32 - y, lower 32 - x
 	MOV		rsi, rax		; 64 bit y pos
 	MOV		rdx, rax		; 64 bit x pos
 
-	MOV		rdi, r12		; Window
+	MOV		rdi, [rbp-0x8]	; Window
 	SHR		rsi, 32			; 32 bit y pos
 	AND		rdx, 0xffffff	; 32 bit x pos
 	CALL	wmove			; move cursor to start position
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Closing the file after all characters have been read
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_close:
 	; Closing the file
 	MOV		rax, 0x3		; Syscall close value
 	MOV		rdi, rbx		; File descriptor saved on line 16
@@ -117,11 +146,10 @@ _close:
 
 	; Restore the stack and restore non-volatile registers used by caller
 	POP		r15
-	POP		r14
 	POP		r13
-	POP		r12
 	POP		rbx
 	XOR		rax, rax	
+	LEAVE
 	RET
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -140,9 +168,7 @@ section .data
 _open_file_err:
 	; Restore stack and non-volatile registers
 	POP		r15
-	POP		r14
 	POP		r13
-	POP		r12
 	POP		rbx
 
 	MOV		rax, 0x1
@@ -152,15 +178,14 @@ _open_file_err:
 	SYSCALL
 
 	MOV		rax, 0x1
+	LEAVE
 	RET
 
 _read_file_err:
 	; Restore stack and non-volatile registers
 	ADD		rsp, 0x16
 	POP		r15
-	POP		r14
 	POP		r13
-	POP		r12
 	POP		rbx
 
 	MOV		rax, 0x1
@@ -170,14 +195,13 @@ _read_file_err:
 	SYSCALL
 
 	MOV		rax, 0x1
+	LEAVE
 	RET
 
 _close_file_err:
 	; Restore stack and non-volatile registers
 	POP		r15
-	POP		r14
 	POP		r13
-	POP		r12
 	POP		rbx
 
 	MOV		rax, 0x1
@@ -187,4 +211,5 @@ _close_file_err:
 	SYSCALL
 
 	MOV		rax, 0x1
+	LEAVE
 	RET

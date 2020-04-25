@@ -32,7 +32,7 @@ _show_menu:
 	MOV		r12, rsi	; Menu Title
 	MOV		r13, rcx	; Num of menu options
 	XOR		r15, r15	; Random use 
-
+	
 	; Creating new screen in center of caller window
 	CALL	_get_win_centerY
 	MOV		r15, rax	; root window height
@@ -68,7 +68,7 @@ _show_menu:
 	; Getting title length
 	MOV		rdx, r15
 	MOV		rdi, r12
-	CALL	.str_len
+	;CALL	.str_len
 	SHR		rax, 1		; Half the string length
 	SUB		rdx, rax
 	
@@ -76,33 +76,41 @@ _show_menu:
 	MOV		rdi, rbx
 	MOV		rsi, 0x1	; y coord
 	MOV		rcx, r12
-	CALL	mvwprintw
+	;CALL	mvwprintw
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Starting the render of the menu options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_item:
-	CMP		r13, 0x0
+	CMP		r13, 0x0		; Make sure that number of items is not zero
 	JLE		.menu_end
 
-	MOV		r12, r13
+	MOV		r12, r13		; Y location offset from first item (AKA number of menu items)
 
-	PUSH	r14
-	XOR		r14, r14		; selection
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rendering the menu option text items
+; Starts two lines done from the title
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_item_loop:
-	MOV		rdi, rbx
-	MOV		rdx, r15
-	MOV		rsi, r12
-	ADD		rsi, 2
-	MOV		rcx, [rbp+(r12+1)*8]
+	MOV		rdi, rbx		; Window to print to
+	MOV		rdx, r15		; Center x of window
+	MOV		rsi, r12		; Y offset from first item in list (1*item_num)
+	ADD		rsi, 2			; Number of terminal lines between the title and start of items
+	MOV		rcx, [rbp+(r12+1)*8] ; Getting the item from the stack, which was pushed by the caller
 	CALL	mvwprintw
 
-	SUB		r12, 1
-	CMP		r12, 0x0
+	SUB		r12, 1			; Y offset moving up one terminal row
+	CMP		r12, 0x0		; Making sure not at the last menu item
 	JG		.menu_item_loop
 
-	MOV		r8, 0
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Moving the cursor up and down to indicate
+; the menu item selection
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	MOV		r12, 1		; Curr pos in menu item list, starts at 1
 .menu_movement:
-
 	MOV		rdi, rbx	
 	CALL	wgetch
 
@@ -118,29 +126,39 @@ _show_menu:
 	CMP		rax, 'j'
 	JE		.menu_move_down
 
-	CMP		rax, 0xa
+	CMP		rax, 0xa		; Enter will select the item and return
 	JE		.menu_end
+	
 	JMP		.menu_movement
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Moves the current cursors Y position
+; up one terminal line
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_move_up:
-	MOV		rdi, rbx
-	MOV		rsi, -1
-	MOV		rdx, 3			; Min y
-	MOV		rcx, rdx
-	ADD		rcx, r13		; Max y = min y + num of menu items
-	SUB		rcx, 1
+	CMP		r12, 0x1		; Don't move up if current position in list is first item
+	JLE		.menu_movement
+
+	MOV		rdi, rbx		; Window 
+	MOV		rsi, -1			; Movement direction
 	CALL	_mov_cursor_y
-	MOV		r14, rax		; Sub num of moves occured from to selected
+
+	SUB		r12, 1			; Curr pos in list - 1
 	JMP		.menu_movement
 	
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Moves the current cursors Y position
+; down one terminal line
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_move_down:
-	MOV		rdi, rbx
-	MOV		rsi, 1			
-	MOV		rdx, 3			; min y
-	MOV		rcx, rdx
-	ADD		rcx, r13		; Max y = min y + num of menu items
+	CMP		r12, r13		; Don't move down if current position in list is the last item
+	JE		.menu_movement
+
+	MOV		rdi, rbx		; Window
+	MOV		rsi, 1			; Movement direction
 	CALL	_mov_cursor_y
-	MOV		r14, rax		; Sub num of moves occured from to selected
+
+	ADD		r12, 1			; Curr pos in list + 1
 	JMP		.menu_movement
 
 .menu_end:
@@ -148,12 +166,20 @@ _show_menu:
 	CALL	delwin
 	
 	; Restore saved non-volatile registers
-	MOV		rax, r14
-	POP		r14
+	MOV		rdi, r12		; Return value is list item selected
+	SUB		rdi, 1			; Sub 1 since index was 1 indexed not 0, we do 0 here
+
+	MOV		rdx, r13		; Number menu items, needed for clearing the stack
+	MOV		rax, 0x8		; Bytes per stack space
+	MUL		rdx				; result stored in rax register
+
 	POP		r15
 	POP		r13
 	POP		r12
 	POP		rbx
+	
+	ADD		rsp, rax		; Restoring stack to remove menu item params
+	MOV		rax, rdi		; Return the selected menu item
 	LEAVE
 	RET		
 

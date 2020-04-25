@@ -20,17 +20,18 @@ extern noecho
 extern getch
 extern endwin
 extern newwin
-extern box
+extern mvaddch
+extern wtimeout
 
 section .data
-	title		db "JAIL GAME", 0x0
+	title		db "GAME TITLE", 0x0
 
 	play_str	db "PLAY", 0x0
 	exit_str	db "EXIT", 0x0
 
-	map:		db "map1.txt", 0x0
-	map_width	equ 60
-	map_height	equ 18
+	map:		db "map2.txt", 0x0
+	map_width	equ 101
+	map_height	equ 30
 
 section .text
 global _start
@@ -56,8 +57,6 @@ _start:
 	PUSH	exit_str		; Last menu item
 	PUSH	play_str		; First menu item
 	CALL	_show_menu
-	POP		r9				; Need to move this to callee
-	POP		r9				; Need to move this to callee
 
 	CMP		rax, 0x0		; First list item selected, PLAY
 	JE		_load_map		
@@ -96,10 +95,10 @@ _load_map:
 	CALL	newwin
 	MOV		rbx, rax		; Game Window
 
-	MOV		rdi, rbx
-	MOV		rsi, '|'
-	MOV		rdx, '*'
-	CALL	box
+	;MOV		rdi, rbx
+	;MOV		rsi, '|'
+	;MOV		rdx, '*'
+	;CALL	box
 
 	; Calculate map size = (# Cols) * (# Rows)
 	MOV		rax, map_width
@@ -122,12 +121,23 @@ _load_map:
 ;
 ; Can use window.asm for maybe helpful procedures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	XOR		r12, r12		; Key pressed
+
+	MOV		rdi, rbx
+	MOV		rsi, 100
+	CALL	wtimeout	
 _game_loop:
 	MOV		rdi, rbx		; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
 
-	CMP		rax, 0xa		; If user input is new line, exit game
+	CMP		eax, -1
+	JE		.move_player
+	MOV		r12, rax
+	
+	CMP		r12, 0xa		; If user input is new line, exit game
 	JE		_exit_success
+
+.move_player:
 
 	;
 	; Start of player movement
@@ -135,24 +145,24 @@ _game_loop:
 
 	; Sorry just have to have vim movement for my sanity
 
-	CMP		rax, 's'		; S key for gamers
+	CMP		r12, 's'		; S key for gamers
 	JE		.mv_player_down
-	CMP		rax, 'j'		; J key for vimers
+	CMP		r12, 'j'		; J key for vimers
 	JE		.mv_player_down
 
-	CMP		rax, 'w'
+	CMP		r12, 'w'
 	JE		.mv_player_up
-	CMP		rax, 'k'		
+	CMP		r12, 'k'		
 	JE		.mv_player_up
 
-	CMP		rax, 'a'
+	CMP		r12, 'a'
 	JE		.mv_player_left
-	CMP		rax, 'h'	
+	CMP		r12, 'h'	
 	JE		.mv_player_left
 
-	CMP		rax, 'd'
+	CMP		r12, 'd'
 	JE		.mv_player_right
-	CMP		rax, 'l'
+	CMP		r12, 'l'
 	JE		.mv_player_right
 
 	; Add other movements here
@@ -167,7 +177,6 @@ _game_loop:
 	MOV		rsi, 1			; Number of squares to jump each press
 	CALL	_mov_cursor_x	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
-
 
 
 .mv_player_left:
