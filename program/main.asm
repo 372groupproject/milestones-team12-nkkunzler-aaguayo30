@@ -18,6 +18,7 @@ extern refresh
 extern cbreak
 extern noecho
 extern getch
+extern free
 extern endwin
 extern newwin
 extern mvaddch
@@ -44,7 +45,7 @@ section .data
 
 	exit_str		db "EXIT", 0x0
 
-	map:		db "map2.txt", 0x0
+	map_file:		db "map2.txt", 0x0
 	map_width	equ 101
 	map_height	equ 30
 
@@ -151,18 +152,29 @@ _load_map:
 	MUL		rdx				; RAX = RDX * RAX
 	MOV		rdx, rax		; map_size
 
-	; Draw map on game window - returns Player *
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;
+; This where the game board is rendered to the terminal and the game loop
+; starts. Most of the code will go below this point.
+;
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rending the map specified by map_file
+;
+; _render_map returns a pointer to a player.
+; The player starts wherever an 'S' appears on the game map
+; If multiple 'S' unknown behavior occurs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	MOV		rdi, rbx		; Game window
-	MOV		rsi, map		; The map to load
+	MOV		rsi, map_file	; The map to load
 	MOV		rcx, 0
 	MOV		r8, 0
 	CALL	_render_map		; Draws the map to the terminal and set cursor to start
+	MOV		[rbp-16], rax	; Player *player
 
 	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
-
-_b2:
-	MOV		[rbp-16], rax	; Player *player
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Player movement / Game loop here
@@ -261,7 +273,7 @@ _menus:
 ; to either resume the game play or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_pause_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, pause_str	; Title for the pause menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -281,7 +293,7 @@ _menus:
 ; again or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_win_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, win_str	; Title for the win menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -302,7 +314,7 @@ _menus:
 ; again or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_lose_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, lose_str	; Title for the lose menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -322,7 +334,9 @@ _menus:
 ; board representing a restart.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _restart:
-	; Need to free player - Its malloc'ed
+	MOV		rdi, [rbp-16]
+	CALL	free			; Freeing the player created
+
 	mov		rdi, rdx
 	CALL	endwin
 	JE		_load_map
@@ -331,6 +345,9 @@ _restart:
 ; Destroys the current game window and then exits the program
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _end_game:
+	MOV		rdi, [rbp-16]
+	CALL	free			; Freeing the player created
+
 	mov		rdi, rdx
 	CALL	endwin
 	; Falls through to exit_success

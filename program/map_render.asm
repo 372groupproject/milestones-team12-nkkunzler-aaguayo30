@@ -3,8 +3,12 @@ extern wmove
 
 %include "./player.asm"
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Change player_chr to what ever ASCII character
+; you desire. Currently 'P' for player.
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
-	err db "easports", 0x0
+	player_chr	equ	'P'
 
 section .bss
 	map_char:	resb 1
@@ -83,7 +87,7 @@ _read:
 
 _add_player:
 	MOV		rdi, [rbp-8]	; Window to render player to
-	MOV		rsi, 'O'		; Player character representation
+	MOV		rsi, player_chr	; Player character representation
 	MOV		rdx, r15		; Player Y coord
 	MOV		rcx, r13		; Player x coord
 	CALL	_new_player		; Returns pointer to player struct
