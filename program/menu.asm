@@ -4,6 +4,8 @@ extern wgetch
 extern delwin
 extern werase
 extern wrefresh
+extern wattron
+extern wattroff
 
 section .data
 	print_fmt	db "%s", 0x0
@@ -22,16 +24,17 @@ _show_menu:
 	PUSH	rbp
 	MOV		rbp, rsp
 
+	SUB		rsp, 8			; Saving enough room for 1 local variable
+	MOV		[rbp-8], rcx	; The number of selectable items in the menu
+
 	; Save non-volatile registers
 	PUSH	rbx
 	PUSH	r12
-	PUSH	r13
 	PUSH	r15
 	MOV		rbx, rdi	; Root window
 	MOV		r12, rsi	; Menu Title
-	MOV		r13, rcx	; Num of menu options
 	XOR		r15, r15	; Random use 
-	
+
 	; Creating new screen in center of caller window
 	CALL	_get_win_centerY
 	MOV		r15, rax	; root window height
@@ -40,16 +43,16 @@ _show_menu:
 	CALL	_get_win_centerX
 	MOV		rcx, rax	; root window width
 
-	; Getting y location
-	MOV		rdi, r13	; window height = Num of menu options
+	; Getting menu window y location
+	MOV		rdi, [rbp-8]; window height = Num of menu options
 	ADD		rdi, 5		; Extra height - 2 for title, 3 space around menu items
 
 	MOV		rax, rdi	
-	SHR		rax, 1		; half windows height
+	SHR		rax, 1		; half menu window height
 	MOV		rdx, r15
 	SUB		rdx, rax	; y = y - (height of window / 2)
 
-	; Getting x location
+	; Getting menu window x location
 	MOV		rsi, 60		; root window width
 	MOV		r15, rsi
 	SHR		r15, 1
@@ -58,15 +61,15 @@ _show_menu:
 	CALL	newwin		; drawing the menu
 	MOV		rbx, rax	; Root window is now that of the newly created window
 
-	; Putting a border around the menu
+	; Putting a pretty border around the menu
 	MOV		rdi, rbx
 	MOV		rsi, '|'
 	MOV		rdx, '*'
 	CALL	box
 
-	; Getting title length
-_B1:
-	; Printing the title of the menu
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rendering the title to the menu window
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	MOV		rdi, rbx
 	MOV		rsi, 0x1	; y coord
 	MOV		rdx, 0x2
@@ -77,114 +80,127 @@ _B1:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Starting the render of the menu options
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;MOV		rdi, rbx
-	;MOV		rsi, 0x5
-	;CALL 	wattrset
-.menu_item:
-	CMP		r13, 0x0		; Make sure that number of items is not zero
+	CMP		QWORD [rbp-8], 0x0	; If no menu items just start menu end procedure
 	JLE		.menu_end
 
-	MOV		r12, r13		; Y location offset from first item (AKA number of menu items)
+	MOV		r12, 1				; Current menu item selected, 1 indexed
+
+.render_menu_items:
+	MOV		r15, [rbp-8]		; RCX = number of menu items
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Rendering the menu option text items
 ; Starts two lines done from the title
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .menu_item_loop:
-	MOV		rdi, rbx		; Window to print to
-	MOV		rsi, r12		; Y offset from first item in list (1*item_num)
-	ADD		rsi, 2			; Number of terminal lines between the title and start of items
-	MOV		rdx, 0x2
-	MOV		rcx, print_fmt
-	MOV		r8, [rbp+(r12+1)*8] ; Getting the item from the stack, which was pushed by the caller
+	CMP		r15, r12		; Current menu item = current selection
+	JNE		.highlight_off
+
+	; Turn on the menu highlight if the player is not hovering over it
+	MOV		rdi, rbx
+	MOV		rsi, 262144			; 262144 is the invert color code for wattron
+	CALL	wattron
+	JMP		.render_item
+
+.highlight_off:
+	; Turn off the menu highlight if the player is not hovering over it
+	MOV		rdi, rbx
+	MOV		rsi, 262144			; 262144 is the invert color code for wattron
+	CALL	wattroff
+
+.render_item:
+	MOV		rdi, rbx			; Window to print to
+	MOV		rsi, r15			; y offset for first item in parameter list 
+	ADD		rsi, 2				; Number of terminal lines between the title and start of items
+	MOV		rdx, 2				; x position (second column in the window) (TODO: TRY TO FIGURE OUT CENTERING)
+	MOV		r8, [rbp+(r15+1)*8] ; Getting menu item from the stack
+	MOV		rcx, print_fmt		; "%s"
 	CALL	mvwprintw
 
-	SUB		r12, 1			; Y offset moving up one terminal row
-	CMP		r12, 0x0		; Making sure not at the last menu item
+	SUB		r15, 1				; Decrement number of menu items
+	CMP		r15, 0x0			; Making sure not at the first menu item (working bottom up)
 	JG		.menu_item_loop
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Moving the cursor up and down to indicate
-; the menu item selection
+; Moving the cursor up and down to indicate the menu
+; item selection. The selected item will highlighted
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-	MOV		r12, 1		; Curr pos in menu item list, starts at 1
-.menu_movement:
+.select_movement:
 	MOV		rdi, rbx	
 	CALL	wgetch
 
 	; Move down one item
 	CMP		rax, 'w'
-	JE		.menu_move_up
+	JE		.select_move_up
 	CMP		rax, 'k'
-	JE		.menu_move_up
+	JE		.select_move_up
 
 	; Move up one item
 	CMP		rax, 's'
-	JE		.menu_move_down
+	JE		.select_move_down
 	CMP		rax, 'j'
-	JE		.menu_move_down
+	JE		.select_move_down
 
-	CMP		rax, 0xa		; Enter will select the item and return
+	CMP		rax, 0xa			; Enter will select the item and return
 	JE		.menu_end
 	
-	JMP		.menu_movement
+	JMP		.select_movement
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moves the current cursors Y position
 ; up one terminal line
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-.menu_move_up:
-	CMP		r12, 0x1		; Don't move up if current position in list is first item
-	JLE		.menu_movement
+.select_move_up:
+	CMP		r12, 0x1			; Don't move up if current position in list is first item
+	JLE		.render_menu_items
 
-	MOV		rdi, rbx		; Window 
-	MOV		rsi, -1			; Movement direction
+	MOV		rdi, rbx			; Window from which cursor to move
+	MOV		rsi, -1				; Movement direction
 	CALL	_mov_cursor_y
 
-	SUB		r12, 1			; Curr pos in list - 1
-	JMP		.menu_movement
+	SUB		r12, 1				; Curr menu item selection index
+	JMP		.render_menu_items
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moves the current cursors Y position
 ; down one terminal line
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-.menu_move_down:
-	CMP		r12, r13		; Don't move down if current position in list is the last item
-	JE		.menu_movement
+.select_move_down:
+	CMP		r12, [rbp-0x8]		; Don't move down if current position in list is the last item
+	JE		.render_menu_items
 
-	MOV		rdi, rbx		; Window
-	MOV		rsi, 1			; Movement direction
+	MOV		rdi, rbx			; Window from which cursor to move
+	MOV		rsi, 1				; Movement direction
 	CALL	_mov_cursor_y
 
-	ADD		r12, 1			; Curr pos in list + 1
-	JMP		.menu_movement
+	ADD		r12, 1				; Curr menu item selection index
+	JMP		.render_menu_items
 
 .menu_end:
-	MOV		rdi, rbx
+	MOV		rdi, rbx			; Clear all contents on the window
 	CALL	werase
 
-	MOV		rdi, rbx
+	MOV		rdi, rbx			; Update the window to display the erase
 	CALL	wrefresh
 
-	MOV		rdi, rbx
+	MOV		rdi, rbx			; Delete the window memory
 	CALL	delwin
 	
 	; Restore saved non-volatile registers
-	MOV		rdi, r12		; Return value is list item selected
-	SUB		rdi, 1			; Sub 1 since index was 1 indexed not 0, we do 0 here
+	MOV		rdi, r12			; Return value is list item selected
+	SUB		rdi, 1				; Sub 1 since index was 1 indexed not 0, we do 0 here
 
-	MOV		rdx, r13		; Number menu items, needed for clearing the stack
-	MOV		rax, 0x8		; Bytes per stack space
-	MUL		rdx				; result stored in rax register
+	MOV		rdx, [rbp-0x8]		; Number menu items, needed for clearing the stack
+	MOV		rax, 0x8			; Bytes per stack space
+	MUL		rdx					; result stored in rax register
 
+	; Restoring non-volatile registers
 	POP		r15
-	POP		r13
 	POP		r12
 	POP		rbx
 
-	ADD		rsp, rax		; Restoring stack to remove menu item params
+	; Restoring stack to remove menu items that are on the stack
+	ADD		rsp, rax				
 	MOV		rax, rdi
 	LEAVE
 	RET		
@@ -193,6 +209,8 @@ _B1:
 ; Parameters:	rdi - The address of the string
 ;
 ; Returns the length of the given string
+;
+; TODO: BREAKS WHEN USING WITH mvwprintw, don't know why
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .str_len:
 	XOR		rax, rax

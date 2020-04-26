@@ -21,6 +21,7 @@ extern getch
 extern endwin
 extern newwin
 extern mvaddch
+extern curs_set
 extern wtimeout
 
 section .data
@@ -54,12 +55,17 @@ _start:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 0x8		; root screen
+	SUB		rsp, 0x8	; Allow space for 1 local variable
 
+	; Standard Ncurses terminal preping
 	CALL	initscr
 	MOV		[rbp-0x8], rax
 	CALL	cbreak
 	CALL	noecho
+
+	; Hiding the cursor
+	XOR		rdi, rdi
+	CALL	curs_set
 
 _load_main_menu:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
