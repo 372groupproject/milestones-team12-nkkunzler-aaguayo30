@@ -55,11 +55,11 @@ _start:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 0x8	; Allow space for 1 local variable
+	SUB		rsp, 16	; Allow space for 1 local variable
 
 	; Standard Ncurses terminal preping
 	CALL	initscr
-	MOV		[rbp-0x8], rax
+	MOV		[rbp-8], rax
 	CALL	cbreak
 	CALL	noecho
 
@@ -151,7 +151,7 @@ _load_map:
 	MUL		rdx				; RAX = RDX * RAX
 	MOV		rdx, rax		; map_size
 
-	; Draw map on game window
+	; Draw map on game window - returns Player *
 	MOV		rdi, rbx		; Game window
 	MOV		rsi, map		; The map to load
 	MOV		rcx, 0
@@ -160,6 +160,8 @@ _load_map:
 
 	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
+
+	MOV		[rbp-16], rax	; Player *player
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Player movement / Game loop here

@@ -1,6 +1,8 @@
 extern mvwaddch
 extern wmove
 
+%include "./player.asm"
+
 section .text
 	err db "easports", 0x0
 
@@ -14,18 +16,19 @@ section .text
 ;				rdx - Map Size
 ;				rcx - X location
 ;				r8 	- Y location
+;
+; Returns - Pointer to the player
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _render_map:
 	PUSH	rbp
 	MOV		rbp, rsp
 
 	; Storing parameters on the stack
-	SUB		rsp, 24
+	SUB		rsp, 32
 	MOV		[rbp-8], rdi	; Window to render to
 	MOV		[rbp-16], rcx	; Game map X position in window
 	MOV		QWORD [rbp-24], 0x0	; Starting position
-
-
+	MOV		QWORD [rbp-32], 0x0	; Player pointer
 
 	; Saving the registers that are non-volatile
 	PUSH	rbx
@@ -56,7 +59,6 @@ _render_map:
 ; to the terminal through the use of ncurses
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	POP		rcx				; Number of bits in the file to read
-_b3:
 _read:
 	PUSH	rcx				; Save current bits read from the file
 
@@ -70,7 +72,6 @@ _read:
 	JL		_read_file_err	
 
 	MOV		rcx, [map_char]
-_b2:
 	CMP		rcx, 0xa		; Is current char '\n'
 	JE		_new_line
 
@@ -80,21 +81,14 @@ _b2:
 	CMP		rcx, 'S'		; Is current char 'S'
 	JNE		_place_char
 
-;;;;;;;;;;;;;;;;;;;;;;;;
-; Stores cursor position of where the S, indicating start
-; position is within the file. This will be returned after
-; rendering is complete. 
-;;;;;;;;;;;;;;;;;;;;;;;;
 _set_start:
-	; If the current char is an 'S', set starting cursor position
-	MOV		rcx, r15		; currY
-	SHL		rcx, 32			; Set upper 32 bits to be the y coord
-	OR		rcx, r13		; Set the lower 32 bits to be the x coord
-	MOV		[rbp-24], rcx	; Save result of position
+	MOV		rdi, [rbp-8]	; Window to render player to
+	MOV		rdi, 'P'		; Player character representation
+	MOV		rsi, r15		; Player Y coord
+	MOV		rdx, r13		; Player x coord
+	;CALL	_new_player		; Returns pointer to player struct
+	MOV		[rbp-32], rax	; Save player pointer
 
-;;;;;;;;;;;;;;;;;;;;;;;;
-; Placing the character read from the _read body on the terminal
-;;;;;;;;;;;;;;;;;;;;;;;;
 _place_char:
 	; mvwaddch(Window, y, x, char)
 	MOV		rdi, [rbp-8]	; Window
@@ -108,10 +102,6 @@ _place_char:
 	LOOP	_read			; Draw next character in file
 	JMP		_render_end
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Moves the cursor y position down one terminal row
-; and resets the x position to the specified x parameter
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _new_line:
 	; Resets X position to initial position and increases y position by 1
 	MOV		r13, [rbp-16]	; currX = origX
@@ -148,7 +138,7 @@ _close:
 	POP		r15
 	POP		r13
 	POP		rbx
-	XOR		rax, rax	
+	MOV		rax, [rbp-32]
 	LEAVE
 	RET
 
