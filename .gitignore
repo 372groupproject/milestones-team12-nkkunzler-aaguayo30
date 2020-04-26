@@ -1,3 +1,5 @@
 *.o
 .nfs*
 tags
+*.
+test.c

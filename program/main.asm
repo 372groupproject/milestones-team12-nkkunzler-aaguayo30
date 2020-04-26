@@ -9,7 +9,7 @@
 ;	- Add win/lose screen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "./map_render.asm"
+%include "./gameboard.asm"
 %include "./window.asm"
 %include "./menu.asm"
 
@@ -46,8 +46,8 @@ section .data
 	exit_str		db "EXIT", 0x0
 
 	map_file:		db "map2.txt", 0x0
-	map_width	equ 101
-	map_height	equ 30
+	map_width		equ 101
+	map_height		equ 30
 
 section .text
 global _start
@@ -56,7 +56,7 @@ _start:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 16	; Allow space for 1 local variable
+	SUB		rsp, 16	; Allow space for 2 local variable
 
 	; Standard Ncurses terminal preping
 	CALL	initscr
@@ -146,11 +146,6 @@ _load_map:
 	CALL	newwin
 	MOV		rbx, rax		; Game Window
 
-	; Calculate map size = (# Cols) * (# Rows)
-	MOV		rax, map_width
-	MOV		rdx, map_height
-	MUL		rdx				; RAX = RDX * RAX
-	MOV		rdx, rax		; map_size
 
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ;
@@ -166,12 +161,16 @@ _load_map:
 ; The player starts wherever an 'S' appears on the game map
 ; If multiple 'S' unknown behavior occurs
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	; Calculate map size = (# Cols) * (# Rows)
+	MOV		rax, map_width
+	MOV		rdx, map_height
+	MUL		rdx				; RAX = RDX * RAX
+
 	MOV		rdi, rbx		; Game window
 	MOV		rsi, map_file	; The map to load
-	MOV		rcx, 0
-	MOV		r8, 0
-	CALL	_render_map		; Draws the map to the terminal and set cursor to start
-	MOV		[rbp-16], rax	; Player *player
+	MOV		rdx, rax		; map_size
+	CALL	_gen_gameboard	; Draws the map to the terminal and set cursor to start
+	MOV		[rbp-16], rax	; GameBoard* gameboard
 
 	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
@@ -202,7 +201,6 @@ _game_loop:
 	JE		_menus.show_pause_menu
 
 .move_player:
-
 	;
 	; Start of player movement
 	;
@@ -237,7 +235,8 @@ _game_loop:
 
 
 .mv_player_right:
-	MOV		rdi, [rbp-16]	; Player
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
 	MOV		rsi, 0			; Move player right 1 column
 	MOV		rdx, 1			; Move the player down/up zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
@@ -245,7 +244,8 @@ _game_loop:
 
 
 .mv_player_left:
-	MOV		rdi, [rbp-16]	; Player
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
 	MOV		rsi, 0			; Move player left 1 column
 	MOV		rdx, -1			; Move the player down/up zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
@@ -253,7 +253,8 @@ _game_loop:
 
 
 .mv_player_up:
-	MOV		rdi, [rbp-16]	; Player
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
 	MOV		rsi, -1			; Move player left 1 column
 	MOV		rdx, 0			; Move the player down/up zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
@@ -261,7 +262,8 @@ _game_loop:
 
 
 .mv_player_down:
-	MOV		rdi, [rbp-16]	; Player
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
 	MOV		rsi, 1			; Move player left 1 column
 	MOV		rdx, 0			; Move the player down/up zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function

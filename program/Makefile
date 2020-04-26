@@ -6,7 +6,7 @@ LDFLAGS = -g -dynamic-linker /lib64/ld-linux-x86-64.so.2
 ifneq "$(MAKECMDGOALS)" "clean"
 TARGET = $(MAKECMDGOALS)
 SRC = $(TARGET).asm
-OBJ = $(TARGET).o map_render.o
+OBJ = $(TARGET).o 
 endif
 
 EXEC = $(basename $(wildcard *.asm))
