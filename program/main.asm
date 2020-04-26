@@ -161,6 +161,7 @@ _load_map:
 	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
 
+_b2:
 	MOV		[rbp-16], rax	; Player *player
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -171,15 +172,15 @@ _load_map:
 	XOR		r12, r12		; Key pressed
 
 	MOV		rdi, rbx
-	MOV		rsi, 100
+	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
 	CALL	wtimeout	
 
 _game_loop:
 	MOV		rdi, rbx		; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
 
-	CMP		eax, -1
-	JE		.move_player
+	CMP		eax, -1			; If the user does not input movement -1 is returned
+	JE		.move_player	; If no input move player in direction of last move
 	MOV		r12, rax
 	
 	CMP		r12, 0xa		; If user input is new line, exit game
@@ -224,30 +225,34 @@ _game_loop:
 
 
 .mv_player_right:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, 1			; Number of squares to jump each press
-	CALL	_mov_cursor_x	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; Player
+	MOV		rsi, 0			; Move player right 1 column
+	MOV		rdx, 1			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 
 .mv_player_left:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, -1			; Number of squares to jump each press
-	CALL	_mov_cursor_x	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; Player
+	MOV		rsi, 0			; Move player left 1 column
+	MOV		rdx, -1			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 
 .mv_player_up:
-	MOV 	rdi, rbx
-	MOV		rsi, -1
-	CALL	_mov_cursor_y
+	MOV		rdi, [rbp-16]	; Player
+	MOV		rsi, -1			; Move player left 1 column
+	MOV		rdx, 0			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop
 
 
 .mv_player_down:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, 1			; Number of square to jump each press
-	CALL	_mov_cursor_y	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; Player
+	MOV		rsi, 1			; Move player left 1 column
+	MOV		rdx, 0			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 _menus:
@@ -317,6 +322,7 @@ _menus:
 ; board representing a restart.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _restart:
+	; Need to free player - Its malloc'ed
 	mov		rdi, rdx
 	CALL	endwin
 	JE		_load_map
@@ -346,6 +352,9 @@ section .data
 section .text
 
 _exit_success:
+	MOV		rdi, 1
+	CALL	curs_set
+
 	CALL	endwin
 
 	; Print success leave message
@@ -363,6 +372,9 @@ _exit_success:
 	SYSCALL
 
 _exit_error:
+	MOV		rdi, 1
+	CALL	curs_set
+
 	CALL	endwin
 
 	; Print error message

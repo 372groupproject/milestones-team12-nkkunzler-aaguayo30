@@ -81,13 +81,14 @@ _read:
 	CMP		rcx, 'S'		; Is current char 'S'
 	JNE		_place_char
 
-_set_start:
+_add_player:
 	MOV		rdi, [rbp-8]	; Window to render player to
-	MOV		rdi, 'P'		; Player character representation
-	MOV		rsi, r15		; Player Y coord
-	MOV		rdx, r13		; Player x coord
-	;CALL	_new_player		; Returns pointer to player struct
+	MOV		rsi, 'O'		; Player character representation
+	MOV		rdx, r15		; Player Y coord
+	MOV		rcx, r13		; Player x coord
+	CALL	_new_player		; Returns pointer to player struct
 	MOV		[rbp-32], rax	; Save player pointer
+	JMP		_next_char_read
 
 _place_char:
 	; mvwaddch(Window, y, x, char)
@@ -97,9 +98,12 @@ _place_char:
 	MOV		rcx, [map_char]	; char
 	CALL	mvwaddch		; Adding the character to the terminal display
 
+_next_char_read:
 	ADD		r13, 1			; currX += 1
 	POP		rcx				; Restore number of bytes left to print
-	LOOP	_read			; Draw next character in file
+	SUB		rcx, 1
+	CMP		rcx, 0x0
+	JG		_read
 	JMP		_render_end
 
 _new_line:
@@ -108,7 +112,9 @@ _new_line:
 	ADD		r15, 1			; currY = origY
 	POP		rcx				; Restore number of bytes left to print
 	ADD		rcx, 1
-	LOOP	_read			; Draw next character in file
+	SUB		rcx, 1
+	CMP		rcx, 0x0
+	JG		_read
 
 _render_end:
 	; Setting the cursor position
