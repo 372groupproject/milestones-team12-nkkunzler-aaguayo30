@@ -104,8 +104,6 @@ _move_player_yx:
 	AND		rdx, 0xffff			; Window height
 	CMP		ax, dx
 	JG		.move_player_exit
-
-	; Check for Collision 
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moving the player by replacing the cell the player
