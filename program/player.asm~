@@ -1,6 +1,6 @@
 extern malloc		; Yes, I know
 extern mvwaddch
-
+extern mvwinch
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Parameters - 	rdi: Window to add character to
 ;				rsi: Player ASCII representation
@@ -58,7 +58,7 @@ _new_player:
 
 .malloc_err:
 	MOV		rax, -1
-	LEAV
+	LEAVE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moves the player up/down/left/right
@@ -104,6 +104,37 @@ _move_player_yx:
 	AND		rdx, 0xffff			; Window height
 	CMP		ax, dx
 	JG		.move_player_exit
+
+
+	; Check for Collision
+	MOV		r10, rdi			; move player so not overwritten
+ 
+	MOV		rsi, [rbp -16]		; get new y value
+	ADD 	rsi, [rdi +12] 
+
+	MOV		rdx, [rbp - 16]  	; get new x value
+	ADD		rdx, [rdi+16]
+
+	MOV		rdi, rbx    		; move window pointer  
+	
+	CALL	mvwinch
+
+	AND		rax, 0xffff
+
+	CMP		rax, '-'
+	JE		.mov_player_exit
+
+	CMP		rax, '_'
+	JE		.mov_player_exit
+
+	MOV		rdi, r10
+
+
+;rdi
+;rsi
+;rdx
+;rcx
+;r8
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moving the player by replacing the cell the player
