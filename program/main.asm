@@ -210,6 +210,8 @@ _game_loop:
 	CMP		r12, 'p'
 	JE		_menus.show_pause_menu
 
+
+
 .move_player:
 	;
 	; Start of player movement
@@ -236,10 +238,6 @@ _game_loop:
 	JE		.mv_player_right
 	CMP		r12, 'l'
 	JE		.mv_player_right
-
-	; Add other movements here
-	; There is a _move_cursor_x method that can maybe be used
-	; See window.asm file for parameter info
 
 	JMP		_game_loop		; Infinite loop / game loop
 

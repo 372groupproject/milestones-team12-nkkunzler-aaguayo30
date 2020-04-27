@@ -75,6 +75,7 @@ _move_player_yx:
 	MOV		[rbp-16], rsi	; y movement direction
 	MOV		[rbp-24], rdx	; x movement direction
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ; Checking that the player is within the bounds
 ; of the window that it is located in
@@ -82,6 +83,7 @@ _move_player_yx:
 	; if (player_x < 0) GOTO .move_player_exit
 	MOV		rax, [rdi+16]		; Current player x location
 	ADD		rax, rdx
+
 	CMP		ax, 0x0
 	JL		.move_player_exit
 
@@ -105,31 +107,47 @@ _move_player_yx:
 	CMP		ax, dx
 	JG		.move_player_exit
 
+;	JMP 	.check_player_y
+;	CMP		rsi, 0
+;	JNE		.check_player_y
 
+;	CMP		rdx, 0
+;	JNE		.check_player_y
+
+;	JMP		.move_player_exit
+
+.check_player_y:
 	; Check for Collision
 	MOV		r10, rdi			; move player so not overwritten
  
-	MOV		rsi, [rbp -16]		; get new y value
-	ADD 	rsi, [rdi +12] 
-
-	MOV		rdx, [rbp - 16]  	; get new x value
-	ADD		rdx, [rdi+16]
-
+	MOV		rsi, [rbp - 16]		; get new y value
+	ADD 	rsi, [rdi + 12]     ; add current x value to new
+	MOV		rdx, [rbp - 24]  	; get new x value
+	ADD		rdx, [rdi+16]       ; add current y valie to new
 	MOV		rdi, rbx    		; move window pointer  
 	
 	CALL	mvwinch
 
 	AND		rax, 0xffff
 
-	CMP		rax, '-'
-	JE		.mov_player_exit
-
-	CMP		rax, '_'
-	JE		.mov_player_exit
-
+	CMP		rax, ' '
 	MOV		rdi, r10
+	JE		.move
 
+	JMP		.move_player_exit
+;
+;.mv_check_x:
+;	MOV		rax, [rbp-16]	; GameBoard *
+;	MOV		rdi, [rax]		; Window *
+;	;MOV		rsi, [rax+8]	; Player * <- Think you can remove everythin above as that is just code to get the player *
+;	MOV		rdx, [rsi+12]	; y pos
+;	MOV		rsi, [rdi+16]	; x pos
+;	ADD		rsi, 1			; x pos + 1
+;	CALL	mvwinch
+;	AND		rax, 255
 
+;	CMP		rax, ' '
+;	JE		.move_player
 ;rdi
 ;rsi
 ;rdx
@@ -141,6 +159,7 @@ _move_player_yx:
 ; is currently standing on with a space and than moving
 ; the player ASCII character to the left/right/up/down
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.move:
 	; Clearing the square the player is currently on
 	MOV		rsi, [rdi+12]	; Player Y location
 	MOV		rdx, [rdi+16]	; Player X location
@@ -165,3 +184,8 @@ _move_player_yx:
 .move_player_exit:
 	LEAVE
 	RET
+
+.valid_move:
+	XOR		rax, rax
+	RET
+

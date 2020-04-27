@@ -108,35 +108,31 @@ _move_player_yx:
 	JG		.move_player_exit
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;
+; Checks for player collision with any wall or enemy
+; by looking in the new spot and determining if there
+; is a space or not
+;;;;;;;;;;;;;;;;;;;;;;;;
+.check_player_move:
 	; Check for Collision
 	MOV		r10, rdi			; move player so not overwritten
  
-	MOV		rsi, [rbp -16]		; get new y value
-	ADD 	rsi, [rdi +12] 
+	MOV		rsi, [rbp - 16]		; get new y value
+	ADD 	rsi, [rdi + 12]     ; add current x value to new
+	MOV		rdx, [rbp - 24]  	; get new x value
+	ADD		rdx, [rdi+16]       ; add current y valie to new
+	MOV		rdi, rbx    		; move window pointer  	
+	CALL	mvwinch             ; get character at next location
 
-	MOV		rdx, [rbp - 16]  	; get new x value
-	ADD		rdx, [rdi+16]
+	AND		rax, 0xffff         ; extract character value
 
-	MOV		rdi, rbx    		; move window pointer  
-	
-	CALL	mvwinch
+	; if (player_x + shift, player_y + shift)== space then move there
+	CMP		rax, ' '            ; check if space is free to move into
+	MOV		rdi, r10            ; re instore the player struct
+	JE		.move               ; move player if valid
 
-	AND		rax, 0xffff
+	JMP		.move_player_exit
 
-	CMP		rax, '-'
-	JE		.move_player_exit
-
-	CMP		rax, '_'
-	JE		.move_player_exit
-
-	MOV		rdi, r10
-
-
-;rdi
-;rsi
-;rdx
-;rcx
-;r8
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moving the player by replacing the cell the player
@@ -172,3 +168,4 @@ _move_player_yx:
 .valid_move:
 	XOR		rax, rax
 	RET
+
