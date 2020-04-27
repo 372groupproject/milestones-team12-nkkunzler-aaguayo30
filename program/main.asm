@@ -9,7 +9,7 @@
 ;	- Add win/lose screen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%include "./map_render.asm"
+%include "./gameboard.asm"
 %include "./window.asm"
 %include "./menu.asm"
 
@@ -18,6 +18,7 @@ extern refresh
 extern cbreak
 extern noecho
 extern getch
+extern free
 extern endwin
 extern newwin
 extern mvaddch
@@ -44,9 +45,9 @@ section .data
 
 	exit_str		db "EXIT", 0x0
 
-	map:		db "map2.txt", 0x0
-	map_width	equ 101
-	map_height	equ 30
+	map_file:		db "map2.txt", 0x0
+	map_width		equ 101
+	map_height		equ 30
 
 section .text
 global _start
@@ -55,11 +56,11 @@ _start:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 0x8	; Allow space for 1 local variable
+	SUB		rsp, 16	; Allow space for 2 local variable
 
 	; Standard Ncurses terminal preping
 	CALL	initscr
-	MOV		[rbp-0x8], rax
+	MOV		[rbp-8], rax
 	CALL	cbreak
 	CALL	noecho
 
@@ -145,18 +146,31 @@ _load_map:
 	CALL	newwin
 	MOV		rbx, rax		; Game Window
 
+
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;
+; This where the game board is rendered to the terminal and the game loop
+; starts. Most of the code will go below this point.
+;
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rending the map specified by map_file
+;
+; _render_map returns a pointer to a player.
+; The player starts wherever an 'S' appears on the game map
+; If multiple 'S' unknown behavior occurs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; Calculate map size = (# Cols) * (# Rows)
 	MOV		rax, map_width
 	MOV		rdx, map_height
 	MUL		rdx				; RAX = RDX * RAX
-	MOV		rdx, rax		; map_size
 
-	; Draw map on game window
 	MOV		rdi, rbx		; Game window
-	MOV		rsi, map		; The map to load
-	MOV		rcx, 0
-	MOV		r8, 0
-	CALL	_render_map		; Draws the map to the terminal and set cursor to start
+	MOV		rsi, map_file	; The map to load
+	MOV		rdx, rax		; map_size
+	CALL	_gen_gameboard	; Draws the map to the terminal and set cursor to start
+	MOV		[rbp-16], rax	; GameBoard* gameboard
 
 	TEST	rax, rax		; Making sure the game map was rendered, error if rax < 0
 	JL		_exit_error
@@ -169,15 +183,15 @@ _load_map:
 	XOR		r12, r12		; Key pressed
 
 	MOV		rdi, rbx
-	MOV		rsi, 100
+	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
 	CALL	wtimeout	
 
 _game_loop:
 	MOV		rdi, rbx		; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
 
-	CMP		eax, -1
-	JE		.move_player
+	CMP		eax, -1			; If the user does not input movement -1 is returned
+	JE		.move_player	; If no input move player in direction of last move
 	MOV		r12, rax
 	
 	CMP		r12, 0xa		; If user input is new line, exit game
@@ -187,7 +201,6 @@ _game_loop:
 	JE		_menus.show_pause_menu
 
 .move_player:
-
 	;
 	; Start of player movement
 	;
@@ -222,30 +235,38 @@ _game_loop:
 
 
 .mv_player_right:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, 1			; Number of squares to jump each press
-	CALL	_mov_cursor_x	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
+	MOV		rsi, 0			; Move player right 1 column
+	MOV		rdx, 1			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 
 .mv_player_left:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, -1			; Number of squares to jump each press
-	CALL	_mov_cursor_x	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
+	MOV		rsi, 0			; Move player left 1 column
+	MOV		rdx, -1			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 
 .mv_player_up:
-	MOV 	rdi, rbx
-	MOV		rsi, -1
-	CALL	_mov_cursor_y
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
+	MOV		rsi, -1			; Move player left 1 column
+	MOV		rdx, 0			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop
 
 
 .mv_player_down:
-	MOV		rdi, rbx		; Window from which to move the cursor
-	MOV		rsi, 1			; Number of square to jump each press
-	CALL	_mov_cursor_y	; CALL window.asm corresponding function
+	MOV		rdi, [rbp-16]	; GameBoard
+	MOV		rdi, [rdi+8]	; Player
+	MOV		rsi, 1			; Move player left 1 column
+	MOV		rdx, 0			; Move the player down/up zero rows
+	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
 _menus:
@@ -254,7 +275,7 @@ _menus:
 ; to either resume the game play or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_pause_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, pause_str	; Title for the pause menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -274,7 +295,7 @@ _menus:
 ; again or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_win_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, win_str	; Title for the win menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -295,7 +316,7 @@ _menus:
 ; again or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_lose_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, lose_str	; Title for the lose menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -315,6 +336,9 @@ _menus:
 ; board representing a restart.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _restart:
+	MOV		rdi, [rbp-16]
+	CALL	free			; Freeing the player created
+
 	mov		rdi, rdx
 	CALL	endwin
 	JE		_load_map
@@ -323,6 +347,9 @@ _restart:
 ; Destroys the current game window and then exits the program
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _end_game:
+	MOV		rdi, [rbp-16]
+	CALL	free			; Freeing the player created
+
 	mov		rdi, rdx
 	CALL	endwin
 	; Falls through to exit_success
@@ -344,6 +371,9 @@ section .data
 section .text
 
 _exit_success:
+	MOV		rdi, 1
+	CALL	curs_set
+
 	CALL	endwin
 
 	; Print success leave message
@@ -361,6 +391,9 @@ _exit_success:
 	SYSCALL
 
 _exit_error:
+	MOV		rdi, 1
+	CALL	curs_set
+
 	CALL	endwin
 
 	; Print error message

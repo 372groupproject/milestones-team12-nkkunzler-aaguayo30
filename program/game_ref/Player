@@ -1,0 +1,23 @@
+Player
+
+NAME:
+	new_player
+
+SYNOPSIS:
+	%include "player.asm"
+	
+	Player* _new_player(WINDOW*, int ASCII_representation , int y, int x)
+
+DESCRIPTION:
+	A Player is defined as being:
+
+	struct GameBoard {
+		WINDOW* window;
+		int chr;
+		int y;
+		int x;
+	}
+
+RETURN:
+	Returns a new player object
+
