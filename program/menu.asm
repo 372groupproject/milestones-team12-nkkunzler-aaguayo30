@@ -1,3 +1,4 @@
+extern stdscr
 extern box
 extern mvwprintw
 extern wgetch
@@ -6,6 +7,7 @@ extern werase
 extern wrefresh
 extern wattron
 extern wattroff
+extern touchwin
 
 section .data
 	print_fmt	db "%s", 0x0
@@ -24,9 +26,10 @@ _show_menu:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 16			; Saving enough room for 2 local variable
-	MOV		[rbp-8], rdi	; The window to render text to
+	SUB		rsp, 24			; Saving enough room for 2 local variable
+	MOV		[rbp-8], rdi	; The root window in which to add the menu to
 	MOV		[rbp-16], rcx	; The number of selectable items in the menu
+	MOV		[rbp-24], rdi	; The actual menu window
 
 	; Save non-volatile registers
 	PUSH	r12
@@ -35,33 +38,33 @@ _show_menu:
 	XOR		r15, r15		; Random use 
 
 	; Creating new screen in center of caller window
+
+	; THIS IS BROKEN
+
+	MOV		rdi, [rbp-8]
 	CALL	_get_win_centerY
-	MOV		r15, rax	; root window height
+	MOV		r15, rax		; root window height
 
 	MOV		rdi, [rbp-8]
 	CALL	_get_win_centerX
-	MOV		rcx, rax	; root window width
+	MOV		rcx, rax		; root window width
 
 	; Getting menu window y location
-	MOV		rdi, [rbp-16]; window height = Num of menu options
-	ADD		rdi, 5		; Extra height - 2 for title, 3 space around menu items
+	MOV		rdi, [rbp-16]	; window height = Num of menu options
+	ADD		rdi, 5			; Extra height - 2 for title, 3 space around menu items
 
-	MOV		rax, rdi	
-	SHR		rax, 1		; half menu window height
+	MOV		rax, rdi		; Need the rdi for window height
+	SHR		rax, 1			; half menu window height
 	MOV		rdx, r15
-	SUB		rdx, rax	; y = y - (height of window / 2)
+	SUB		rdx, rax		; y = y - (height of window / 2)
 
 	; Getting menu window x location
-	MOV		rsi, 60		; root window width
-	MOV		r15, rsi
-	SHR		r15, 1
-	SUB		rcx, r15	; x = x - (root window with / 2)
-
-	CALL	newwin		; drawing the menu
-	MOV		[rbp-0x8], rax 
+	MOV		rsi, 60			; root window width
+	CALL	newwin			; drawing the menu
+	MOV		[rbp-24], rax 
 
 	; Putting a pretty border around the menu
-	MOV		rdi, [rbp-0x8]
+	MOV		rdi, [rbp-24]
 	MOV		rsi, '|'
 	MOV		rdx, '*'
 	CALL	box
@@ -69,11 +72,11 @@ _show_menu:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Rendering the title to the menu window
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV		rdi, [rbp-0x8]
-	MOV		rsi, 0x1	; y coord
-	MOV		rdx, 0x2
+	MOV		rdi, [rbp-24]
+	MOV		rsi, 0x1		; y coord
+	MOV		rdx, 0x2		; x coord
 	MOV		rcx, print_fmt
-	MOV		r8, r12
+	MOV		r8, r12			; The title
 	CALL	mvwprintw
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -96,19 +99,19 @@ _show_menu:
 	JNE		.highlight_off
 
 	; Turn on the menu highlight if the player is not hovering over it
-	MOV		rdi, [rbp-8]
+	MOV		rdi, [rbp-24]
 	MOV		rsi, 262144			; 262144 is the invert color code for wattron
 	CALL	wattron
 	JMP		.render_item
 
 .highlight_off:
 	; Turn off the menu highlight if the player is not hovering over it
-	MOV		rdi, [rbp-8] 
+	MOV		rdi, [rbp-24] 
 	MOV		rsi, 262144			; 262144 is the invert color code for wattron
 	CALL	wattroff
 
 .render_item:
-	MOV		rdi, [rbp-8]		; Window to print to
+	MOV		rdi, [rbp-24]		; Window to print to
 	MOV		rsi, r15			; y offset for first item in parameter list 
 	ADD		rsi, 2				; Number of terminal lines between the title and start of items
 	MOV		rdx, 2				; x position (second column in the window) (TODO: TRY TO FIGURE OUT CENTERING)
@@ -125,7 +128,7 @@ _show_menu:
 ; item selection. The selected item will highlighted
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .select_movement:
-	MOV		rdi, [rbp-8]
+	MOV		rdi, [rbp-24]
 	CALL	wgetch
 
 	; Move down one item
@@ -153,7 +156,7 @@ _show_menu:
 	CMP		r12, 0x1			; Don't move up if current position in list is first item
 	JLE		.render_menu_items
 
-	MOV		rdi, [rbp-8]		; Window from which cursor to move
+	MOV		rdi, [rbp-24]		; Window from which cursor to move
 	MOV		rsi, -1				; Movement direction
 	CALL	_mov_cursor_y
 
@@ -168,7 +171,7 @@ _show_menu:
 	CMP		r12, [rbp-16]		; Don't move down if current position in list is the last item
 	JE		.render_menu_items
 
-	MOV		rdi, [rbp-8]		; Window from which cursor to move
+	MOV		rdi, [rbp-24]		; Window from which cursor to move
 	MOV		rsi, 1				; Movement direction
 	CALL	_mov_cursor_y
 
@@ -176,14 +179,14 @@ _show_menu:
 	JMP		.render_menu_items
 
 .menu_end:
-	MOV		rdi, [rbp-8]		; Clear all contents on the window
-	CALL	werase
+	MOV		rdi, [rbp-24]		; Delete the window memory
+	CALL	delwin
+
+	MOV		rdi, [rbp-8]		; Update the window to display the erase
+	CALL	touchwin
 
 	MOV		rdi, [rbp-8]		; Update the window to display the erase
 	CALL	wrefresh
-
-	MOV		rdi, [rbp-8]		; Delete the window memory
-	CALL	delwin
 	
 	; Restore saved non-volatile registers
 	MOV		rdi, r12			; Return value is list item selected

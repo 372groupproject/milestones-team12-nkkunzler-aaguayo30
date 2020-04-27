@@ -75,6 +75,7 @@ _move_player_yx:
 	MOV		[rbp-16], rsi	; y movement direction
 	MOV		[rbp-24], rdx	; x movement direction
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ; Checking that the player is within the bounds
 ; of the window that it is located in
@@ -82,6 +83,7 @@ _move_player_yx:
 	; if (player_x < 0) GOTO .move_player_exit
 	MOV		rax, [rdi+16]		; Current player x location
 	ADD		rax, rdx
+
 	CMP		ax, 0x0
 	JL		.move_player_exit
 
@@ -141,6 +143,7 @@ _move_player_yx:
 ; is currently standing on with a space and than moving
 ; the player ASCII character to the left/right/up/down
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.move:
 	; Clearing the square the player is currently on
 	MOV		rsi, [rdi+12]	; Player Y location
 	MOV		rdx, [rdi+16]	; Player X location
@@ -164,4 +167,8 @@ _move_player_yx:
 
 .move_player_exit:
 	LEAVE
+	RET
+
+.valid_move:
+	XOR		rax, rax
 	RET
