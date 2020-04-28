@@ -8,6 +8,7 @@ extern wrefresh
 extern wattron
 extern wattroff
 extern touchwin
+extern getbegyx
 
 section .data
 	print_fmt	db "%s", 0x0
@@ -36,30 +37,42 @@ _show_menu:
 	PUSH	r15
 	MOV		r12, rsi		; Menu Title
 	XOR		r15, r15		; Random use 
-
 	; Creating new screen in center of caller window
 
-	; THIS IS BROKEN
-
+    ; Getting window height
 	MOV		rdi, [rbp-8]
-	CALL	_get_win_centerY
-	MOV		r15, rax		; root window height
+	MOV		rdx, [rdi+8]
+	AND		rdx, 0xffff     ; Root window y
 
+    MOV     rdi, [rbp-8]
+    MOV     rax, [rdi+4]
+    AND     rax, 0xffff    ; Root window height
+    SHR     rax, 1
+    ADD     rdx, rax
+
+    ; (root x + (root width / 2) - new width width
 	MOV		rdi, [rbp-8]
-	CALL	_get_win_centerX
-	MOV		rcx, rax		; root window width
+    MOV     rcx, [rdi+10]
+    AND     rcx, 0xffff     ; Root window x
+
+    MOV     rdi, [rbp-8]
+    MOV     rax, [rdi+6]
+    AND     rax, 0xffff    ; Root window width
+    SHR     rax, 1
+    ADD     rcx, rax
 
 	; Getting menu window y location
-	MOV		rdi, [rbp-16]	; window height = Num of menu options
-	ADD		rdi, 5			; Extra height - 2 for title, 3 space around menu items
+	MOV		rdi, [rbp-16]	; Number of menu items
+	ADD		rdi, 5			; Height of menu window
 
-	MOV		rax, rdi		; Need the rdi for window height
-	SHR		rax, 1			; half menu window height
-	MOV		rdx, r15
-	SUB		rdx, rax		; y = y - (height of window / 2)
+	MOV		rax, rdi		
+	SHR		rax, 1			; Menu Height / 2
+	SUB		rdx, rax		; y = (menu height / 2) - (root window height)
 
 	; Getting menu window x location
 	MOV		rsi, 60			; root window width
+    SUB     rcx, 30
+_B9:
 	CALL	newwin			; drawing the menu
 	MOV		[rbp-24], rax 
 
@@ -201,8 +214,8 @@ _show_menu:
 	POP		r12
 
 	; Restoring stack to remove menu items that are on the stack
-	ADD		rsp, rax				
 	MOV		rax, rdi
+    ADD     rsp, rax
 	LEAVE
 	RET		
 
