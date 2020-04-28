@@ -210,7 +210,16 @@ _game_loop:
 	CMP		r12, 'p'
 	JE		_menus.show_pause_menu
 
+.move_enemy:
+	;
+	; Start of enemy movement
+	; Basic AI of moving directly towards the player
+    ; if the direct pathway is blocked, will move the opposite direction
+    ; in hopes of finding a new pathway
+ 	;
 
+	MOV		rdi, [rbp-16] 
+	JMP		_game_loop
 
 .move_player:
 	;

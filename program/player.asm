@@ -117,9 +117,9 @@ _move_player_yx:
 	; Check for Collision
 	MOV		r10, rdi			; move player so not overwritten
  
-	MOV		rsi, [rbp - 16]		; get new y value
-	ADD 	rsi, [rdi + 12]     ; add current x value to new
-	MOV		rdx, [rbp - 24]  	; get new x value
+	MOV		rsi, [rbp-16]		; get new y value
+	ADD 	rsi, [rdi+12]       ; add current x value to new
+	MOV		rdx, [rbp-24]   	; get new x value
 	ADD		rdx, [rdi+16]       ; add current y valie to new
 	MOV		rdi, rbx    		; move window pointer  	
 	CALL	mvwinch             ; get character at next location
