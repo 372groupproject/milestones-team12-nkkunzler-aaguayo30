@@ -11,7 +11,7 @@ extern getch
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
 	player_chr	equ	'P'
-	enemy_chr	equ 'E'
+	enemy_chr	equ 'B'
 
 section .bss
 	map_char:	resb 1

@@ -206,6 +206,8 @@ _game_loop:
     MOV     rdi, [rbp-24]
     CALL    _increament_score
 
+	CALL	_move_enemy
+
     MOV     rdi, [rbp-24]
     MOV     rdi, [rdi]
     CALL    wrefresh
@@ -223,20 +225,7 @@ _game_loop:
 	CMP		r12, 'p'
 	JE		_menus.show_pause_menu
 
-<<<<<<< HEAD
-.move_enemy:
-	;
-	; Start of enemy movement
-	; Basic AI of moving directly towards the player
-    ; if the direct pathway is blocked, will move the opposite direction
-    ; in hopes of finding a new pathway
- 	;
 
-	MOV		rdi, [rbp-16] 
-	JMP		_game_loop
-
-=======
->>>>>>> 504888b568155ade157ee3f9ae0f3feeda12cada
 .move_player:
 	; Start of player movement
 	; Sorry just have to have vim movement for my sanity
@@ -267,16 +256,16 @@ _game_loop:
 .mv_player_right:
 	MOV		rdi, [rbp-16]	; GameBoard
 	MOV		rdi, [rdi+8]	; Player
-	MOV		rsi, 0			; Move player right 1 column
-	MOV		rdx, 1			; Move the player down/up zero rows
+	MOV		rsi, 0			; Move player down/up zero rows
+	MOV		rdx, 1			; Move the player right 1 column
 	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP     _game_loop		; Jump back to game loop to get next input
 
 .mv_player_left:
 	MOV		rdi, [rbp-16]	; GameBoard
 	MOV		rdi, [rdi+8]	; Player
-	MOV		rsi, 0			; Move player left 1 column
-	MOV		rdx, -1			; Move the player down/up zero rows
+	MOV		rsi, 0			; Move player down/up zero rows
+	MOV		rdx, -1			; Move the player left 1 column
 	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
 
@@ -284,8 +273,8 @@ _game_loop:
 .mv_player_up:
 	MOV		rdi, [rbp-16]	; GameBoard
 	MOV		rdi, [rdi+8]	; Player
-	MOV		rsi, -1			; Move player left 1 column
-	MOV		rdx, 0			; Move the player down/up zero rows
+	MOV		rsi, -1			; Move player up 1 column
+	MOV		rdx, 0			; Move the player left/right zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop
 
@@ -293,10 +282,28 @@ _game_loop:
 .mv_player_down:
 	MOV		rdi, [rbp-16]	; GameBoard
 	MOV		rdi, [rdi+8]	; Player
-	MOV		rsi, 1			; Move player left 1 column
-	MOV		rdx, 0			; Move the player down/up zero rows
+	MOV		rsi, 1			; Move player down 1 column
+	MOV		rdx, 0			; Move the player left/right zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
+
+_move_enemy:
+	;
+	; Start of enemy movement
+	; Basic AI of moving directly towards the player
+    ; if the direct pathway is blocked, will move the opposite direction
+    ; in hopes of finding a new pathway
+ 	;
+	MOV		rdi, [rbp-16] 	; Gameboard
+	MOV		rdi, [rdi+24]	; Enemy
+	MOV		rsi, 0
+	MOV		rdx, 1
+	CALL	_move_player_yx		
+	RET
+
+;	MOV		r10, [rdi+16]	; Save current Y location
+;	MOV		r11, [rdi+24]	; Save current X location
+
 
 _menus:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

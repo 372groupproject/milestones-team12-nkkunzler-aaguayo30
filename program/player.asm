@@ -75,64 +75,12 @@ _move_player_yx:
 	MOV		[rbp-16], rsi	; y movement direction
 	MOV		[rbp-24], rdx	; x movement direction
 
-;;;;;;;;;;;;;;;;;;;;;;;;
-; Checking that the player is within the bounds
-; of the window that it is located in
-;;;;;;;;;;;;;;;;;;;;;;;;
-	; if (player_x < 0) GOTO .move_player_exit
-	MOV		rax, [rdi+24]		; Current player x location
-	ADD		rax, rdx
-	CMP		ax, 0x0
-	JL		.move_player_exit
-
-	; if (player_x > window_width) GOTO .move_player_exit
-    MOV     rdx, [rdi]
-	MOV		rdx, [rdx+6]
-	AND		rdx, 0xffff			; Window width
-	CMP		ax, dx
-	JG		.move_player_exit
-
-	; if (player_y < 0) GOTO .move_player_exit
-	MOV		rax, [rdi+16]		; Current player y location
-	ADD		rax, rsi
-	CMP		ax, 0x0				; If y loc is negative do not move the player
-	JL		.move_player_exit
-	
-	; if (player_y > window_height) GOTO .move_player_exit
-	MOV		rdx, [rdi]	
-	MOV		rdx, [rdx+4]
-	AND		rdx, 0xffff			; Window height
-	CMP		ax, dx
-	JG		.move_player_exit
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;
-; Checks for player collision with any wall or enemy
-; by looking in the new spot and determining if there
-; is a space or not
-;;;;;;;;;;;;;;;;;;;;;;;;
-.check_player_move:
-	; Check for Collision
-;	MOV		r10, rdi			; move player so not overwritten
- 
-;	MOV		rsi, [rbp-16]		; get new y value
-;	ADD 	rsi, [rdi+12]       ; add current x value to new
-;	MOV		rdx, [rbp-24]   	; get new x value
-;	ADD		rdx, [rdi+16]       ; add current y valie to new
-	MOV		rsi, [rbp - 16]		; get new y value
-	ADD 	rsi, [rdi + 16]     ; add current x value to new
-	MOV		rdx, [rbp - 24]  	; get new x value
-	ADD		rdx, [rdi + 24]       ; add current y valie to new
-	MOV		rdi, rbx    		; move window pointer  	
-	CALL	mvwinch             ; get character at next location
-	AND		rax, 0xffff         ; extract character value
-
-	; if (player_x + shift, player_y + shift)== space then move there
-	CMP		rax, ' '            ; check if space is free to move into
-	JE		.move               ; move player if valid
-
-	JMP		.move_player_exit
-
+	CALL	_valid_move
+	CMP		rax, 1
+	JE		.move
+	JMP		.move_player_exit	
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moving the player by replacing the cell the player
@@ -169,4 +117,82 @@ _move_player_yx:
 
 .move_player_exit:
 	LEAVE
+	RET
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Determines if a valid move
+; rdi : player pointer
+; rsi : Y movement direction (- is up, + is down)
+; rdx : X movement direction (- is left, + is right)
+;
+;;;;;;;;;;;;;;;;;;;;;;;;
+_valid_move:
+;	PUSH	rbp
+;	MOV		rbp, rsp
+;	SUB		rsp, 24
+;	MOV		[rbp-8], rdi	; Player *
+;	MOV		[rbp-16], rsi	; y movement direction
+;	MOV		[rbp-24], rdx	; x movement direction
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Checking that the player is within the bounds
+	; of the window that it is located in
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; if (player_x < 0) GOTO .move_player_exit
+	MOV		rax, [rdi+24]		; Current player x location
+	ADD		rax, rdx
+	CMP		ax, 0x0
+	JL		.valid_move_exit_fail
+
+	; if (player_x > window_width) GOTO .move_player_exit
+    MOV     rdx, [rdi]
+	MOV		rdx, [rdx+6]
+	AND		rdx, 0xffff			; Window width
+	CMP		ax, dx
+	JG		.valid_move_exit_fail
+
+	; if (player_y < 0) GOTO .move_player_exit
+	MOV		rax, [rdi+16]		; Current player y location
+	ADD		rax, rsi
+	CMP		ax, 0x0				; If y loc is negative do not move the player
+	JL		.valid_move_exit_fail
+	
+	; if (player_y > window_height) GOTO .move_player_exit
+	MOV		rdx, [rdi]	
+	MOV		rdx, [rdx+4]
+	AND		rdx, 0xffff			; Window height
+	CMP		ax, dx
+	JG		.valid_move_exit_fail
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Checks for player collision with any wall or enemy
+	; by looking in the new spot and determining if there
+	; is a space or not
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		r10, rdi				; move player so not overwritten
+ 
+	MOV		rsi, [rbp - 16]			; get new y value
+	ADD 	rsi, [rdi + 16]     	; add current x value to new
+	MOV		rdx, [rbp - 24]  		; get new x value
+	ADD		rdx, [rdi + 24]     	; add current y valie to new
+	MOV		rdi, rbx    			; move window pointer  	
+	CALL	mvwinch             	; get character at next location
+	AND		rax, 0xffff         	; extract character value
+
+	; if (player_x + shift, player_y + shift)== space then move there
+	CMP		rax, ' '            	; check if space is free to move into
+	JE		.valid_move_exit_pass	; move player if valid
+
+	JMP		.valid_move_exit_fail
+
+
+.valid_move_exit_pass:
+	MOV		rax, 1
+	RET
+
+.valid_move_exit_fail:
+	MOV		rax, 0
 	RET
