@@ -1,6 +1,7 @@
 extern malloc
 extern mvwaddch
 extern wmove
+extern getch
 
 %include "./player.asm"
 
@@ -41,7 +42,6 @@ _gen_gameboard:
 	MOV		QWORD [rbp-24], rdx	; Map size
 	MOV		QWORD [rbp-32], 0x0	; GameBoard pointer
 
-
 	; Malloc room for GameBoard 
 	MOV		rdi, 24				; Save 24 bytes, 3 - 8 byte pointers
 	CALL	malloc				; Need to add error checking
@@ -55,9 +55,6 @@ _gen_gameboard:
 	PUSH	rbx
 	PUSH	r13
 	PUSH	r15
-
-	MOV		r13, rcx		; X Location
-	MOV		r15, r8			; Y Location
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Opening the specified file
@@ -78,6 +75,8 @@ _gen_gameboard:
 ; to the terminal through the use of ncurses
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	XOR 	r13, r13		; Start at row 0 of the game window
+    XOR     r15, r15
+
 _read:
 	XOR		rax, rax		; Read syscall value
 	MOV		rdi, rbx		; Map file
@@ -109,6 +108,7 @@ _add_player:
 	CALL	_new_player		; Returns pointer to player struct
 	MOV		rcx, [rbp-32]	; Them gameboard struct
 	MOV		[rcx+8], rax	; Setting player pointer
+
 	JMP		_next_char_read
 
 _add_enemy:
@@ -122,9 +122,8 @@ _add_enemy:
 	JMP		_next_char_read
 
 _place_char:
-	; mvwaddch(Window, y, x, char)
 	MOV		rdi, [rbp-8]		; Window
-	MOV		rsi, r15			; currY
+	MOV		rsi, r15 			; currY
 	MOV		rdx, r13			; currX
 	MOV		rcx, [map_char]		; char
 	CALL	mvwaddch			; Adding the character to the terminal display
@@ -148,6 +147,8 @@ _render_end:
 ; Closing the file after all characters have been read
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _close:
+    MOV     rdi, [rbp-8]
+    CALL    wrefresh
 	; Closing the file
 	MOV		rax, 0x3		; Syscall close value
 	MOV		rdi, rbx		; File descriptor saved on line 16
@@ -196,7 +197,6 @@ _open_file_err:
 
 _read_file_err:
 	; Restore stack and non-volatile registers
-	ADD		rsp, 0x16
 	POP		r15
 	POP		r13
 	POP		rbx
