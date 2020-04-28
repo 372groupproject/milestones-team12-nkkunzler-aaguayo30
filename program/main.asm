@@ -25,6 +25,8 @@ extern newwin
 extern mvaddch
 extern curs_set
 extern wtimeout
+extern wrefresh
+extern printw
 
 section .data
 	title			db "GAME TITLE", 0x0
@@ -38,10 +40,10 @@ section .data
 	resume_str		db "RESUME", 0x0
 
 	info_str		db "INFO", 0x0
-	goal_info_str	db "Reach the 'E' marked on the map without being attacked.", 0x0
-	mv_key_info_str	db "The player controllers use standard AWSD keys or HJKL.", 0x0
-	ex_key_info_str db "To pause the game press the 'p' key.", 0x0
-	hint_str		db "Hint: Holding the keys will increase the players speed.", 0x0
+	goal_info_str	db "Avoid the 'E' enemy.", 0x0
+	mv_key_info_str	db "Move using standard AWSD keys or HJKL.", 0x0
+	ex_key_info_str db "Pause by pressing the 'P' key.", 0x0
+	hint_str		db "Hint: Hold direction keys to move faster.", 0x0
 	credit_str		db "Created by: Angel Aguayo and Nicholas Kunzler", 0x0
 
 	exit_str		db "EXIT", 0x0
@@ -57,7 +59,10 @@ _start:
 	PUSH	rbp
 	MOV		rbp, rsp
 
-	SUB		rsp, 16	; Allow space for 2 local variable
+	SUB		rsp, 24; Allow space for 3 local variable
+	; rsp-8 = Root Window and Game window
+	; rsp-16 = GameBoard*
+	; rsp-24 = Scoreboard*
 
 	; Standard Ncurses terminal preping
 	CALL	initscr
@@ -79,7 +84,7 @@ _load_main_menu:
 	; All the menu items are stored on the stack and not within the
 	; standared registers
 	; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]    ; Window to which to render menu
 	MOV		rsi, title		; Title for the menu, currently not working
 	MOV		rcx, 3			; Number of menu items
 	PUSH	exit_str		; Middle menu item
@@ -105,7 +110,7 @@ _load_main_menu:
 ; creators, use.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _load_info_menu:
-	MOV		rdi, [rbp-0x8]	; Window to which to render menu
+	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, info_str	; Title for the menu, currently not working
 	MOV		rcx, 5			; Number of menu items
 	PUSH	credit_str
@@ -114,7 +119,6 @@ _load_info_menu:
 	PUSH	mv_key_info_str
 	PUSH	goal_info_str
 	CALL	_show_menu
-
 	JMP		_load_main_menu
 
 
@@ -122,8 +126,6 @@ _load_info_menu:
 ; Loading the map the player will run on
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _load_map:
-	CALL	refresh
-
 	; Get Y position for game map window
 	MOV		rdx, map_height	; RDX = y coord
 	SHR		rdx, 1			; Map height / 2
@@ -150,12 +152,16 @@ _load_map:
 	CALL	newwin
 	MOV		rbx, rax		; Game Window
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Generating the scoreboard window
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 	POP		rdi
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
 	CALL	_new_scoreboard
-
+    MOV     [rbp-24], rax
 
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ;
@@ -175,7 +181,6 @@ _load_map:
 	MOV		rax, map_width
 	MOV		rdx, map_height
 	MUL		rdx				; RAX = RDX * RAX
-
 	MOV		rdi, rbx		; Game window
 	MOV		rsi, map_file	; The map to load
 	MOV		rdx, rax		; map_size
@@ -190,14 +195,22 @@ _load_map:
 ;
 ; Can use window.asm for maybe helpful procedures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	XOR		r12, r12		; Key pressed
+	MOV     r12, 'l'		; Key pressed
 
-	MOV		rdi, rbx
+    MOV     rdi, [rbp-16]
+    MOV     rdi, [rdi]
 	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
 	CALL	wtimeout	
 
 _game_loop:
-	MOV		rdi, rbx		; Window in which to get input from
+    MOV     rdi, [rbp-24]
+    CALL    _increament_score
+
+    MOV     rdi, [rbp-24]
+    MOV     rdi, [rdi]
+    CALL    wrefresh
+
+	MOV		rdi, [rbp-8]    ; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
 
 	CMP		eax, -1			; If the user does not input movement -1 is returned
@@ -210,13 +223,8 @@ _game_loop:
 	CMP		r12, 'p'
 	JE		_menus.show_pause_menu
 
-
-
 .move_player:
-	;
 	; Start of player movement
-	;
-
 	; Sorry just have to have vim movement for my sanity
 
 	CMP		r12, 's'		; S key for gamers
@@ -248,7 +256,7 @@ _game_loop:
 	MOV		rsi, 0			; Move player right 1 column
 	MOV		rdx, 1			; Move the player down/up zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
-	JMP		_game_loop		; Jump back to game loop to get next input
+	JMP     _game_loop		; Jump back to game loop to get next input
 
 .mv_player_left:
 	MOV		rdi, [rbp-16]	; GameBoard
@@ -282,7 +290,8 @@ _menus:
 ; to either resume the game play or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_pause_menu:
-	MOV		rdi, [rbp-8]	; Window to which to render menu
+	MOV		rdi, [rbp-16]
+	MOV		rdi, [rdi]		; Window to which to render menu
 	MOV		rsi, pause_str	; Title for the pause menu
 	MOV		rcx, 2			; Number of menu items
 	PUSH	exit_str		; Last menu item
@@ -290,7 +299,7 @@ _menus:
 	CALL	_show_menu
 	
 	CMP		rax, 0x0		; First list item selected, RESUME
-	JE		_game_loop.mv_player_left
+	JE		_game_loop
 
 	CMP		rax, 0x1		; Second list item selected, EXIT
 	JE		_end_game
@@ -302,6 +311,7 @@ _menus:
 ; again or to exit the game.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .show_win_menu:
+	MOV		rdi, [rbp-16]	; GameBoard
 	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, win_str	; Title for the win menu
 	MOV		rcx, 2			; Number of menu items
@@ -343,6 +353,10 @@ _menus:
 ; board representing a restart.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _restart:
+    MOV     rax, [rbp-24]
+    MOV     rdi, [rax]      ; Freeing the scoreboard window
+    CALL    delwin
+
 	MOV		rdi, [rbp-16]
 	CALL	free			; Freeing the player created
 

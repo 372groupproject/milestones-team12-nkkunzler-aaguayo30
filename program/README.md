@@ -10,9 +10,9 @@ or enemy players.
 ```make main && ./main```
 
 ## Goals
-- [ ] Create a menu selection or way to start the game
+- [X] Create a menu selection or way to start the game
 - [X] Read a map text file and render to terminal screen
   - [X] Center the map
-- [ ] Create a character that can move around the map
+- [X] Create a character that can move around the map
 - [ ] Create an enemy that chases after the player's character
-- [ ] Create a win/lose screen or message
+- [X] Create a win/lose screen or message

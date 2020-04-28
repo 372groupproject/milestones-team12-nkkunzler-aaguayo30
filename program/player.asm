@@ -1,6 +1,7 @@
 extern malloc		; Yes, I know
 extern mvwaddch
 extern mvwinch
+extern wrefresh
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Parameters - 	rdi: Window to add character to
 ;				rsi: Player ASCII representation
@@ -15,7 +16,6 @@ extern mvwinch
 ;		int chr;
 ;		int y;
 ;		int x;
-;		(4 byte padding)
 ; }
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,7 +38,7 @@ _new_player:
 	MOV		rsi, rax		; Y location
 	CALL	mvwaddch
 
-	MOV		rdi, 24			; 8 byte pointer, 3 - 4 byte ints, 4 byte buffer
+	MOV		rdi, 32			; 8 byte pointer, 3 - 4 byte ints, 4 byte buffer
 	CALL	malloc			
 
 	CMP		rax, 0			; Checking that malloc was able to malloc
@@ -51,8 +51,8 @@ _new_player:
 
 	MOV		[rax], rdi		; Window player belongs to
 	MOV		[rax+8], rsi	; Player ASCII character
-	MOV		[rax+12], rdx	; Player Y location
-	MOV		[rax+16], rcx	; Player X location
+	MOV		[rax+16], rdx	; Player Y location
+	MOV		[rax+24], rcx	; Player X location
 	LEAVE
 	RET
 
@@ -63,7 +63,7 @@ _new_player:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Moves the player up/down/left/right
 ;
-; Parameters:	rdi - The player to move
+; Parameters:	rdi - Player *
 ;				rsi - Y movement direction (- is down, + is up)
 ;				rdx - X movement direction (- is left, + is right)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -71,31 +71,29 @@ _move_player_yx:
 	PUSH	rbp
 	MOV		rbp, rsp
 	SUB		rsp, 24
-	MOV		[rbp-8], rdi	; Player pointer
+	MOV		[rbp-8], rdi	; Player *
 	MOV		[rbp-16], rsi	; y movement direction
 	MOV		[rbp-24], rdx	; x movement direction
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ; Checking that the player is within the bounds
 ; of the window that it is located in
 ;;;;;;;;;;;;;;;;;;;;;;;;
 	; if (player_x < 0) GOTO .move_player_exit
-	MOV		rax, [rdi+16]		; Current player x location
+	MOV		rax, [rdi+24]		; Current player x location
 	ADD		rax, rdx
-
 	CMP		ax, 0x0
 	JL		.move_player_exit
 
 	; if (player_x > window_width) GOTO .move_player_exit
-	MOV		rdx, [rdi]	
+    MOV     rdx, [rdi]
 	MOV		rdx, [rdx+6]
 	AND		rdx, 0xffff			; Window width
 	CMP		ax, dx
 	JG		.move_player_exit
 
 	; if (player_y < 0) GOTO .move_player_exit
-	MOV		rax, [rdi+12]		; Current player y location
+	MOV		rax, [rdi+16]		; Current player y location
 	ADD		rax, rsi
 	CMP		ax, 0x0				; If y loc is negative do not move the player
 	JL		.move_player_exit
@@ -115,20 +113,16 @@ _move_player_yx:
 ;;;;;;;;;;;;;;;;;;;;;;;;
 .check_player_move:
 	; Check for Collision
-	MOV		r10, rdi			; move player so not overwritten
- 
 	MOV		rsi, [rbp - 16]		; get new y value
-	ADD 	rsi, [rdi + 12]     ; add current x value to new
+	ADD 	rsi, [rdi + 16]     ; add current x value to new
 	MOV		rdx, [rbp - 24]  	; get new x value
-	ADD		rdx, [rdi+16]       ; add current y valie to new
+	ADD		rdx, [rdi + 24]       ; add current y valie to new
 	MOV		rdi, rbx    		; move window pointer  	
 	CALL	mvwinch             ; get character at next location
-
 	AND		rax, 0xffff         ; extract character value
 
 	; if (player_x + shift, player_y + shift)== space then move there
 	CMP		rax, ' '            ; check if space is free to move into
-	MOV		rdi, r10            ; re instore the player struct
 	JE		.move               ; move player if valid
 
 	JMP		.move_player_exit
@@ -140,32 +134,33 @@ _move_player_yx:
 ; the player ASCII character to the left/right/up/down
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .move:
+    MOV     rdi, [rbp-8]    ; Player *
 	; Clearing the square the player is currently on
-	MOV		rsi, [rdi+12]	; Player Y location
-	MOV		rdx, [rdi+16]	; Player X location
+	MOV		rsi, [rdi+16]	; Player Y location
+	MOV		rdx, [rdi+24]	; Player X location
 	MOV		rdi, [rdi]		; Window the player is on
 	MOV		rcx, ' '		; Place an empty char at current player pos
 	CALL	mvwaddch
 
 	; Moving the player x position left 1 or right 1, depending on rsi
 	MOV		rdi, [rbp-8]	; Restore player pointer back into RDI
-	MOV		rsi, [rbp-16]	; Restore y movement direction back into RDX
-	MOV		rdx, [rbp-24]	; Restore x movement direction back into RSI
-	ADD		[rdi+12], rsi	; Move the player up or down (y dir)
-	ADD		[rdi+16], rdx	; Move the player left or right (x dir)
+	MOV		rsi, [rbp-16]	; Restore y movement direction
+	MOV		rdx, [rbp-24]	; Restore x movement direction
+	ADD		[rdi+16], rsi	; Move the player up or down (y dir)
+	ADD		[rdi+24], rdx	; Move the player left or right (x dir)
 
 	; Placing the ASCII character at new player location
-	MOV		rsi, [rdi+12]	; Player Y location
-	MOV		rdx, [rdi+16]	; Player X location
+    MOV     rdi, [rbp-8]
+	MOV		rsi, [rdi+16]	; Player Y location
+	MOV		rdx, [rdi+24]	; Player X location
 	MOV		rcx, [rdi+8]	; Place player ASCII character
 	MOV		rdi, [rdi]		; Window the player is on
 	CALL	mvwaddch
 
+    MOV     rdi, [rbp-8]
+    MOV     rdi, [rdi]
+    CALL    wrefresh
+
 .move_player_exit:
 	LEAVE
 	RET
-
-.valid_move:
-	XOR		rax, rax
-	RET
-
