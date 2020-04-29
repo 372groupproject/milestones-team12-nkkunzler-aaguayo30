@@ -138,6 +138,7 @@ _add_player:
 	MOV		rdx, r15		; Player Y coord
 	MOV		rcx, r13		; Player x coord
 	CALL	_new_player		; Returns pointer to player struct
+	MOV		QWORD [rax+32], 0
 	MOV		rcx, [rbp-32]	; The gameboard struct
 	MOV		[rcx+8], rax	; Setting player pointer
 
