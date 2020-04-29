@@ -54,7 +54,7 @@ _new_player:
 	MOV		[rax+8], rsi	; Player ASCII character
 	MOV		[rax+16], rdx	; Player Y location
 	MOV		[rax+24], rcx	; Player X location
-	MOV		QWORD [rax+32], 0x0 ; Player starts with zero tokens collected
+	MOV		QWORD [rax+32], -1 ; Player starts with zero tokens collected
 	LEAVE
 	RET
 
@@ -194,7 +194,9 @@ _valid_move:
 	JMP		.valid_move_exit_fail
 
 .valid_move_add_token_score:
-	MOV		rdi, [rbp-8]
+	MOV		rdi, [rbp-8]			; Player
+	CMP		QWORD [rdi+32], -1
+	JLE		.valid_move_exit_fail
 	ADD		QWORD [rdi+32], 1
 
 .valid_move_exit_pass:
