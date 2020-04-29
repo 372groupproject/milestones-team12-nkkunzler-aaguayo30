@@ -458,7 +458,7 @@ _move_enemy:
 	JE		.up_closest
 
 .up_set_neg:
-	MOV		r12, 1000000000			; set distance to -1
+	MOV		r12, 1000000000			; set distance to BIG NUMBER (super sloppy, I know)
 	JMP		.right_check
 	
 .up_closest:
@@ -476,7 +476,7 @@ _move_enemy:
 	JMP		.right_closest
 
 .right_set_neg:
-	MOV		r13, 10000000000			; set distance = -1
+	MOV		r13, 10000000000			; set distance = BIG NUMBER
 	JMP		.down_check
 
 
@@ -496,7 +496,7 @@ _move_enemy:
 	JE		.down_closest
 
 .down_set_neg:
-	MOV		r14, 100000000000			; set disrance = 1
+	MOV		r14, 100000000000			; set disrance = BIG NUMBER
 	JMP		.left_check
 
 .down_closest:
@@ -515,7 +515,7 @@ _move_enemy:
 	JE		.left_closest
 
 .left_set_neg:
-	MOV		r15, 100000000000			; set distance = -1
+	MOV		r15, 100000000000			; set distance = BIG NUMBER
 	JMP		.perform_enemy_move
 
 .left_closest:
@@ -616,7 +616,7 @@ _move_enemy:
 
 .compare_left:
 	CMP		r15, r8			; is left dist smaller than current min
-	JE		.left_min
+	JL		.left_min
 	JMP		.end_game	
 
 
