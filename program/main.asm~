@@ -52,6 +52,8 @@ section .data
 	map_width		equ 75
 	map_height		equ 25
 
+	dir				equ	16		; bitmap showing valid directions, 0=up, 2=right, 4=down, 8=left, 16=not set
+
 section .text
 global _start
 
@@ -204,13 +206,13 @@ _load_map:
 
 _game_loop:
     MOV     rdi, [rbp-24]
-    CALL    _increament_score
+;    CALL    _increament_score
 
 	CALL	_move_enemy
 
     MOV     rdi, [rbp-24]
     MOV     rdi, [rdi]
-    CALL    wrefresh
+;    CALL    wrefresh
 
 	MOV		rdi, [rbp-8]    ; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
@@ -294,15 +296,130 @@ _move_enemy:
     ; if the direct pathway is blocked, will move the opposite direction
     ; in hopes of finding a new pathway
  	;
+
+	;
+	; isValid=0,0,0,0
+	; for every direction
+	; 	determine if valid
+	;		if so, calculate distance to player
+	;
+	; go through all distances
+	; whichever one is smaller wins
 	MOV		rdi, [rbp-16] 	; Gameboard
-	MOV		rdi, [rdi+24]	; Enemy
+
+	MOV		r8, dir
+	MOV		r9, [rdi+16]	; Enemy
+	MOV		r10, [rdi+16]	; Save current Y location
+	MOV		r11, [rdi+24]	; Save current X location
+	
+
+	;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Go through every direction and determine which ones are valid
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;
+.calc_up:
+	;check if we can move up
+	MOV		rdi, r9
+	MOV		rsi, 1			; Move up 1 row
+	MOV		rdx, 0			; move left/right zero columns
+	CALL	_valid_move	
+	MOV		r12, rax
+
+.calc_down:
+	;check if we can move down
+	MOV		rdi, r9
+	MOV		rsi, -1			; Move dowm 1 row
+	MOV		rdx, 0			; move left/right zero columns
+	CALL	_valid_move	
+	MOV		r13, rax
+
+.calc_left:
+	;check if we can move left
+	MOV		rdi, r9
+	MOV		rsi, 0			; Move up/down zero row
+	MOV		rdx, -1			; move left 1 column
+	CALL	_valid_move	
+	MOV		r14, rax
+
+.calc_right:
+	;check if we can move right
+	MOV		rdi, r9
+	MOV		rsi, 0			; Move up/down zero row
+	MOV		rdx, 1			; move right 1 column
+	CALL	_valid_move	
+	MOV		r15, rax
+
+
+	;
+	; Disable the move that was previously taken
+	; This prevents the enemy from ever going backwards and thus
+	; getting stuck in a corner
+	;
+.check_up:
+	; check move up is disabled	
+	CMP		r8, 0
+	JE		.set_up
+	JMP		.check_right
+
+.set_up:
+	MOV		r12, 0
+
+.check_right:
+	; move right is disabled
+	CMP		r8, 2
+	JE		.set_right
+	JMP		.check_down
+
+.set_right:
+	MOV		r13, 0	
+
+.check_down:
+	; move down is disbaled
+	CMP		r8, 4
+	JE		.set_down
+	JMP		.check_left	
+
+.set_down:
+	MOV		r14, 0
+
+.check_left:
+	; move left is disbaled
+	CMP		r8, 8
+	JE		.set_left
+
+.set_left:
+	MOV		r15, 0
+
+	;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Calculate the distance between enemy and 
+	; the player depending on various moves
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;
+.calc_closest:
+	RET
+	CMP		r12, 1
+	JE		.up_close
+	JMP		.right_close
+
+.up_close:
+	
+
+.right_close:
+
+
+.down_close:
+
+
+.left_close:
+
+
+.perform_enemy_move:
 	MOV		rsi, 0
 	MOV		rdx, 1
 	CALL	_move_player_yx		
 	RET
-
-;	MOV		r10, [rdi+16]	; Save current Y location
-;	MOV		r11, [rdi+24]	; Save current X location
 
 
 _menus:
