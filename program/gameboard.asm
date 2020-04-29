@@ -2,6 +2,10 @@ extern malloc
 extern mvwaddch
 extern wmove
 extern getch
+extern wattron
+extern wattroff
+extern init_pair
+extern COLOR_PAIR
 
 %include "./player.asm"
 
@@ -12,6 +16,7 @@ extern getch
 section .text
 	player_chr	equ	'P'
 	enemy_chr	equ 'E'
+	token_chr	equ 'o'
 
 section .bss
 	map_char:	resb 1
@@ -28,6 +33,7 @@ section .text
 ;		WINDOW* window;
 ;		Player* player;
 ;		Enemy* enemy;
+;		int num_tokens;
 ;}
 ;
 ; Locals: [rbp-8] = GameBoard pointer
@@ -43,12 +49,15 @@ _gen_gameboard:
 	MOV		QWORD [rbp-32], 0x0	; GameBoard pointer
 
 	; Malloc room for GameBoard 
-	MOV		rdi, 24				; Save 24 bytes, 3 - 8 byte pointers
+	MOV		rdi, 32				; Save 24 bytes, 3 - 8 byte pointers, 1 - 8 byte counter
 	CALL	malloc				; Need to add error checking
 	MOV		[rbp-32], rax		; Local to store GameBoard pointer 
 
 	MOV		rdi, [rbp-8]		; Window in which the gameboard is drawn
 	MOV		[rax], rdi			; Setting GameBoard Window* field
+	
+	MOV		rdi, [rbp-32]
+	MOV		QWORD [rdi+24], 0x0		; Number of tokens on the board
 
 	; Storing parameters on the stack
 	; Saving the registers that are non-volatile
@@ -77,6 +86,23 @@ _gen_gameboard:
 	XOR 	r13, r13		; Start at row 0 of the game window
     XOR     r15, r15
 
+	;;;;;;;;;;;;;;;;
+	; Setting up colors
+	;;;;;;;;;;;;;;;;
+	; Yellow text - For tokens
+	MOV		rdi, 1
+	MOV		rsi, 3
+	MOV		rdx, 0
+	CALL	init_pair
+
+	MOV		rdi, 2
+	MOV		rsi, 1
+	MOV		rdx, 0
+	CALL	init_pair
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Starting to read the map and render it
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _read:
 	XOR		rax, rax		; Read syscall value
 	MOV		rdi, rbx		; Map file
@@ -96,9 +122,15 @@ _read:
 	
 	CMP		cx, player_chr	; Is current char a player?
 	JE		_add_player
+
 	CMP		cx, enemy_chr	; Is current char an enemy?
 	JE		_add_enemy
+
+	CMP		cx, token_chr	; Is current char a token
+	JE		_add_token
+
 	JMP		_place_char
+
 
 _add_player:
 	MOV		rdi, [rbp-8]	; Window to render player to
@@ -106,7 +138,7 @@ _add_player:
 	MOV		rdx, r15		; Player Y coord
 	MOV		rcx, r13		; Player x coord
 	CALL	_new_player		; Returns pointer to player struct
-	MOV		rcx, [rbp-32]	; Them gameboard struct
+	MOV		rcx, [rbp-32]	; The gameboard struct
 	MOV		[rcx+8], rax	; Setting player pointer
 
 	JMP		_next_char_read
@@ -117,9 +149,19 @@ _add_enemy:
 	MOV		rdx, r15		; Player Y coord
 	MOV		rcx, r13		; Player x coord
 	CALL	_new_player		; Returns pointer to player struct
-	MOV		rcx, [rbp-32]	; Them gameboard struct
+	MOV		rcx, [rbp-32]	; The gameboard struct
 	MOV		[rcx+16], rax	; Setting enemy player pointer
 	JMP		_next_char_read
+
+_add_token:
+	MOV		rcx, [rbp-32]		; The gameboard struct
+	ADD		QWORD [rcx+24], 1	; Adding 1 to current number of tokens
+
+	MOV		rdi, 1
+	CALL	COLOR_PAIR
+	MOV		rdi, [rbp-8]		; Setting token to a yellow color
+	MOV		rsi, rax
+	CALL	wattron
 
 _place_char:
 	MOV		rdi, [rbp-8]		; Window
@@ -127,6 +169,9 @@ _place_char:
 	MOV		rdx, r13			; currX
 	MOV		rcx, [map_char]		; char
 	CALL	mvwaddch			; Adding the character to the terminal display
+
+	MOV		rdi, [rbp-8]
+	CALL	wattroff
 
 _next_char_read:
 	ADD		r13, 1				; currX += 1

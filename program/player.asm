@@ -16,6 +16,7 @@ extern wrefresh
 ;		int chr;
 ;		int y;
 ;		int x;
+;		int tokens_collected;
 ; }
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,7 +39,7 @@ _new_player:
 	MOV		rsi, rax		; Y location
 	CALL	mvwaddch
 
-	MOV		rdi, 32			; 8 byte pointer, 3 - 4 byte ints, 4 byte buffer
+	MOV		rdi, 40			; 8 byte pointer, 3 - 4 byte ints, 8 byte score 
 	CALL	malloc			
 
 	CMP		rax, 0			; Checking that malloc was able to malloc
@@ -53,6 +54,7 @@ _new_player:
 	MOV		[rax+8], rsi	; Player ASCII character
 	MOV		[rax+16], rdx	; Player Y location
 	MOV		[rax+24], rcx	; Player X location
+	MOV		QWORD [rax+32], 0x0 ; Player starts with zero tokens collected
 	LEAVE
 	RET
 
@@ -129,12 +131,12 @@ _move_player_yx:
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 _valid_move:
-;	PUSH	rbp
-;	MOV		rbp, rsp
-;	SUB		rsp, 24
-;	MOV		[rbp-8], rdi	; Player *
-;	MOV		[rbp-16], rsi	; y movement direction
-;	MOV		[rbp-24], rdx	; x movement direction
+	PUSH	rbp
+	MOV		rbp, rsp
+	SUB		rsp, 24
+	MOV		[rbp-8], rdi	; Player *
+	MOV		[rbp-16], rsi	; y movement direction
+	MOV		[rbp-24], rdx	; x movement direction
 
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Checking that the player is within the bounds
@@ -180,19 +182,27 @@ _valid_move:
 	ADD		rdx, [rdi + 24]     	; add current y valie to new
 	MOV		rdi, rbx    			; move window pointer  	
 	CALL	mvwinch             	; get character at next location
-	AND		rax, 0xffff         	; extract character value
+	AND		rax, 0xff         	; extract character value
 
 	; if (player_x + shift, player_y + shift)== space then move there
 	CMP		rax, ' '            	; check if space is free to move into
 	JE		.valid_move_exit_pass	; move player if valid
 
+	CMP		rax, token_chr
+	JE		.valid_move_add_token_score
+
 	JMP		.valid_move_exit_fail
 
+.valid_move_add_token_score:
+	MOV		rdi, [rbp-8]
+	ADD		QWORD [rdi+32], 1
 
 .valid_move_exit_pass:
 	MOV		rax, 1
+	LEAVE
 	RET
 
 .valid_move_exit_fail:
 	MOV		rax, 0
+	LEAVE
 	RET

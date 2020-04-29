@@ -27,6 +27,7 @@ extern curs_set
 extern wtimeout
 extern wrefresh
 extern printw
+extern start_color
 
 section .data
 	title			db "GAME TITLE", 0x0
@@ -35,18 +36,24 @@ section .data
 	win_str			db "YOU WON!", 0x0
 	lose_str		db "YOU LOST", 0x0
 	play_again_str	db "PLAY AGAIN", 0x0
+	restart_str		db "RESTART", 0x0
 
 	pause_str		db "PAUSE", 0x0
 	resume_str		db "RESUME", 0x0
 
 	info_str		db "INFO", 0x0
-	goal_info_str	db "Avoid the 'E' enemy.", 0x0
-	mv_key_info_str	db "Move using standard AWSD keys or HJKL.", 0x0
-	ex_key_info_str db "Pause by pressing the 'P' key.", 0x0
-	hint_str		db "Hint: Hold direction keys to move faster.", 0x0
-	credit_str		db "Created by: Angel Aguayo and Nicholas Kunzler", 0x0
+	goal_info_str	db "Collect the golden 'O' and maximize your score.", 0x0
+	gis_2			db "Be careful, if the score becomes zero, its game over.", 0x0
+	gis_3			db "Ohh, and watch out for that enemy chasing you.", 0x0
+	gis_4			db "Nervous? Press any key to stop and watch your score melt.", 0x0
+	mv_key_info_str	db "Move using boring AWSD keys or the interestig HJKL keys.", 0x0
+	ex_key_info_str db "Pause by pressing the 'P' key, but who pauses anyway?", 00
+	hint_str		db "Hint: Percision over speed, no unnecessary moves!!", 0x0
+	credit_str		db "Developed by: Angel Aguayo and Nicholas Kunzler", 0x0
 
 	exit_str		db "EXIT", 0x0
+
+	empty_line		db "", 0x0
 
 	map_file:		db "map0.txt", 0x0
 	map_width		equ 75
@@ -69,6 +76,7 @@ _start:
 	MOV		[rbp-8], rax
 	CALL	cbreak
 	CALL	noecho
+	CALL	start_color
 
 	; Hiding the cursor
 	XOR		rdi, rdi
@@ -112,12 +120,21 @@ _load_main_menu:
 _load_info_menu:
 	MOV		rdi, [rbp-8]	; Window to which to render menu
 	MOV		rsi, info_str	; Title for the menu, currently not working
-	MOV		rcx, 5			; Number of menu items
+	MOV		rcx, 13			; Number of menu items
+	;; THIS IS A MESS AND BAD BUT DONT HAVE TIME TO MESS WITH MANAGING NEW LINES
 	PUSH	credit_str
+	PUSH	empty_line
 	PUSH	hint_str
+	PUSH	empty_line
 	PUSH	ex_key_info_str
+	PUSH	empty_line
 	PUSH	mv_key_info_str
+	PUSH	empty_line
+	PUSH 	gis_4
+	PUSH	gis_3
+	PUSH	gis_2
 	PUSH	goal_info_str
+	PUSH	empty_line
 	CALL	_show_menu
 	JMP		_load_main_menu
 
@@ -205,6 +222,18 @@ _load_map:
 
 _game_loop:
 	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Checking whether all tokens in the game were collected
+	; If they were the game was won otherwise keep going
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-16]
+	MOV		rax, [rdi+24]	; # of Tokens
+	MOV		rdi, [rdi+8]	; The player*
+	MOV		rdi, [rdi+32]	; # of tokens of the player
+	CMP		rdi, rax		; If player has same # tokens as gameboard has # toks the player won
+	JE		_menus.show_win_menu
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Getting the user input, if no input after 
 	; x milliseconds auto move
 	;;;;;;;;;;;;;;;;;;;;;;;;
@@ -216,9 +245,16 @@ _game_loop:
 	JE		.move_player	; If no input move player in direction of last move
 	MOV		r12, rax
 
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;
+	; Menu toggle options
+	;;;;;;;;;;;;;;;;;;;;;;;;;
+	CMP		r12, 'p'
+	JE		_menus.show_pause_menu
+
 	;;;;;;;;;;;;;;;;;;;;;;;;
-	; If the player has pressed a move button
-	; add one to their score, if score is zero, they lose
+	; If the player has pressed a button, that is not reserved,
+	; take 5 points away
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	MOV		rdi, [rbp-24]
 	MOV		rsi, -5				; Amount to decrease the score by
@@ -228,15 +264,6 @@ _game_loop:
 	MOV		rdi, [rdi+8]
 	CMP		rdi, 0x0
 	JLE		_menus.show_lose_menu
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;
-	; Menu toggle options
-	;;;;;;;;;;;;;;;;;;;;;;;;;
-	CMP		r12, 0xa		; If user input is new line, exit game
-	JE		_menus.show_lose_menu
-
-	CMP		r12, 'p'
-	JE		_menus.show_pause_menu
 
 
 .move_player:
@@ -327,16 +354,21 @@ _menus:
 	MOV		rdi, [rbp-16]
 	MOV		rdi, [rdi]		; Window to which to render menu
 	MOV		rsi, pause_str	; Title for the pause menu
-	MOV		rcx, 2			; Number of menu items
+	MOV		rcx, 3			; Number of menu items
 	PUSH	exit_str		; Last menu item
+	PUSH	restart_str		; Restart
 	PUSH	resume_str		; First menu item
 	CALL	_show_menu
 	
 	CMP		rax, 0x0		; First list item selected, RESUME
 	JE		_game_loop
 
-	CMP		rax, 0x1		; Second list item selected, EXIT
+	CMP		rax, 0x1
+	JE		_restart
+
+	CMP		rax, 0x2		; Second list item selected, EXIT
 	JE		_end_game
+
 	JMP		_exit_error		; Strange selection is an error
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
