@@ -78,8 +78,8 @@ _B9:
 
 	; Putting a pretty border around the menu
 	MOV		rdi, [rbp-24]
-	MOV		rsi, '|'
-	MOV		rdx, '*'
+	MOV		rsi, 0
+	MOV		rdx, 0
 	CALL	box
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -52,7 +52,7 @@ section .data
 	map_width		equ 75
 	map_height		equ 25
 
-	dir				equ	16		; bitmap showing valid directions, 0=up, 2=right, 4=down, 8=left, 16=not set
+	dir				dq	16		; bitmap showing valid directions, 0=up, 2=right, 4=down, 8=left, 16=not set
 
 section .text
 global _start
@@ -162,6 +162,7 @@ _load_map:
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
+	MOV		rcx, 100			; Starting score
 	CALL	_new_scoreboard
     MOV     [rbp-24], rax
 
@@ -197,30 +198,45 @@ _load_map:
 ;
 ; Can use window.asm for maybe helpful procedures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV     r12, 'l'		; Key pressed
+	XOR		r12, r12		; Key pressed
 
-    MOV     rdi, [rbp-16]
-    MOV     rdi, [rdi]
+	MOV		rdi, [rbp-16]
+	MOV		rdi, [rdi]
 	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
-	CALL	wtimeout	
+	CALL	wtimeout
 
 _game_loop:
-    MOV     rdi, [rbp-24]
-;    CALL    _increament_score
+	PUSH	r12
+	CALL	_move_enemy
+	POP		r12
 
-;	CALL	_move_enemy
-
-    MOV     rdi, [rbp-24]
-    MOV     rdi, [rdi]
-;    CALL    wrefresh
-
-	MOV		rdi, [rbp-8]    ; Window in which to get input from
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Getting the user input, if no input after 
+	; x milliseconds auto move
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-16]
+	MOV		rdi, [rdi]
 	CALL	wgetch			; Waiting for user input
 
 	CMP		eax, -1			; If the user does not input movement -1 is returned
 	JE		.move_player	; If no input move player in direction of last move
 	MOV		r12, rax
-	
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; If the player has pressed a move button
+	; add one to their score, if score is zero, they lose
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-24]
+	MOV		rsi, -5				; Amount to decrease the score by
+	CALL	_increment_score
+
+	MOV		rdi, [rbp-24]
+	MOV		rdi, [rdi+8]
+	CMP		rdi, 0x0
+	JLE		_menus.show_lose_menu
+	;;;;;;;;;;;;;;;;;;;;;;;;;
+	; Menu toggle options
+	;;;;;;;;;;;;;;;;;;;;;;;;;
 	CMP		r12, 0xa		; If user input is new line, exit game
 	JE		_menus.show_lose_menu
 
@@ -296,22 +312,11 @@ _move_enemy:
     ; if the direct pathway is blocked, will move the opposite direction
     ; in hopes of finding a new pathway
  	;
-
-	;
-	; isValid=0,0,0,0
-	; for every direction
-	; 	determine if valid
-	;		if so, calculate distance to player
-	;
-	; go through all distances
-	; whichever one is smaller wins
-	MOV		rdi, [rbp-16] 	; Gameboard
-
-	MOV		r8, dir
+	MOV		r8, [dir]
+	MOV		rdi, [rbp-16]	; Gameboard
 	MOV		r9, [rdi+16]	; Enemy
-	MOV		r10, [rdi+16]	; Save current Y location
-	MOV		r11, [rdi+24]	; Save current X location
-	
+	MOV		r10, [r9+16]	; Save current Y location
+	MOV		r11, [r9+24]	; Save current X location
 
 	;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -320,15 +325,15 @@ _move_enemy:
 	;;;;;;;;;;;;;;;;;;;;;;;
 
 	;check if we can move up
-	MOV		rdi, r9
-	MOV		rsi, 1			; Move up 1 row
+	MOV		rdi, r9			; 
+	MOV		rsi, -1			; Move up 1 row
 	MOV		rdx, 0			; move left/right zero columns
 	CALL	_valid_move	
 	MOV		r12, rax
 
 	;check if we can move down
 	MOV		rdi, r9
-	MOV		rsi, -1			; Move dowm 1 row
+	MOV		rsi, 1			; Move dowm 1 row
 	MOV		rdx, 0			; move left/right zero columns
 	CALL	_valid_move	
 	MOV		r13, rax
@@ -347,77 +352,275 @@ _move_enemy:
 	CALL	_valid_move	
 	MOV		r15, rax
 
-
-	;
-	; Disable the move that was previously taken
-	; This prevents the enemy from ever going backwards and thus
-	; getting stuck in a corner
-	;
+;
+; Disable the move that was previously taken
+; This prevents the enemy from ever going backwards and thus
+; getting stuck in a corner
+;
 .check_up:
 	; check move up is disabled	
 	CMP		r8, 0
-	JE		.set_up
-	JMP		.check_right
+	JNE		.check_right
 
-.set_up:
-	MOV		r12, 0
+;.set_up:
+	XOR		r12, r12
 
 .check_right:
 	; move right is disabled
 	CMP		r8, 2
-	JE		.set_right
-	JMP		.check_down
+	JNE		.check_down
 
 .set_right:
-	MOV		r13, 0	
+	XOR		r13, r13	
 
 .check_down:
 	; move down is disbaled
 	CMP		r8, 4
-	JE		.set_down
-	JMP		.check_left	
+	JNE		.check_left	
 
 .set_down:
-	MOV		r14, 0
+	XOR		r14, r14
 
 .check_left:
 	; move left is disbaled
 	CMP		r8, 8
-	JE		.set_left
+	JNE		.calc_closest
 
 .set_left:
-	MOV		r15, 0
+	XOR		r15, r15
 
-	;;;;;;;;;;;;;;;;;;;;;;;
-	;
-	; Calculate the distance between enemy and 
-	; the player depending on various moves
-	;
-	;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Calculate the distance between enemy and 
+; the player depending on various moves
+;
+;;;;;;;;;;;;;;;;;;;;;;;
 .calc_closest:
+	MOV		r8, [rbp-16]	; Gameboard
+	MOV		r8, [r8+8]		; Player
+
+	; check if up needs to be calculated
 	CMP		r12, 1
-	JE		.up_close
-	JMP		.right_close
+	JE		.up_closest
 
-.up_close:
-	CMP		r13, 1
+.up_set_neg:
+	MOV		r12, -1			; set distance to -1
+	JMP		.right_check
 	
+.up_closest:
+	MOV		rsi, [r8+16]	; Player y
+	MOV		rdi, [r8+24]	; Player x
+	
+	MOV		rcx, r10		; Store enemy y		
+	ADD		rcx, -1			; move up one row
+	MOV		rdx, r11		; store enemy x
+	CALL	_calc_distance	; calculate distance between player and enemy next move
+	MOV		r12, rax
 
-.right_close:
+.right_check:
+	CMP		r13, 1			; is right a valid move
+	JMP		.right_closest
+
+.right_set_neg:
+	MOV		r13, -1			; set distance = -1
+	JMP		.down_check
 
 
-.down_close:
+.right_closest:
+	MOV		rsi, [r8+16]	; Player y
+	MOV		rdi, [r8+24]	; Player x
+	
+	MOV		rcx, r10		; Store enemy y		
+	MOV		rdx, r11		; store enemy x
+	ADD		rdx, 1			; move right 1 column
+	CALL	_calc_distance	; calculate distance between player and enemy next move
+	MOV		r13, rax
 
 
-.left_close:
+.down_check:
+	CMP		r14, 1			; is down a valid move
+	JE		.down_closest
+
+.down_set_neg:
+	MOV		r14, -1			; set disrance = 1
+	JMP		.left_check
+
+.down_closest:
+	MOV		rsi, [r8+16]	; Player y
+	MOV		rdi, [r8+24]	; Player x
+	
+	MOV		rcx, r10		; Store enemy y		
+	ADD		rcx, 1			; move down one row
+	MOV		rdx, r11		; store enemy x
+	CALL	_calc_distance	; calculate distance between player and enemy next move
+	MOV		r14, rax
 
 
+.left_check:
+	CMP		r15, 1			; is left a valid move
+	JE		.left_closest
+
+.left_set_neg:
+	MOV		r15, -1			; set distance = -1
+	JMP		.perform_enemy_move
+
+.left_closest:
+	MOV		rsi, [r8+16]	; Player y
+	MOV		rdi, [r8+24]	; Player x
+	
+	MOV		rcx, r10		; Store enemy y		
+	MOV		rdx, r11		; store enemy x
+	ADD		rdx, -1			; move left one column
+	CALL	_calc_distance	; calculate distance between player and enemy next move
+	MOV		r12, rax
+
+;
+; Need to find direction to move in
+; Current min direction will be stored in (x,y)=(rdx, rsi)
+; Current min distance is stored in r8
+;
 .perform_enemy_move:
-	MOV		rsi, 0
-	MOV		rdx, 1
+	XOR		rdx, rdx		; x=0
+	XOR		rsi, rsi		; y=0
+
+.is_up_lose:
+	CMP		r12, 0			; if distance is 0, we have hit the player
+	JNE		.is_right_lose	; not a losing move
+	
+	; lose the game
+	MOV		rdi, r9			; Enemy
+	MOV		rsi, -1			; Move up one row
+	XOR		rdx, rdx		; Move left/right zero columns
+	CALL	_move_player_yx	; Move enemy before ending game so user knows they were touched	
+	CALL	_menus.show_lose_menu	; End game
+
+.is_right_lose:
+	CMP		r13, 0			; if distance is 0, we have hit the player
+	JNE		.compare_right	; not a losing move
+	
+	; lose the game
+	MOV		rdi, r9			; Enemy
+	XOR		rsi, rsi		; Move up/down zero row
+	MOV		rdx, 1			; Move right 0 columns
+	CALL	_move_player_yx	; Move enemy before ending game so user knows they were touched	
+	CALL	_menus.show_lose_menu	; End game
+
+
+.compare_right:
+	; compare up distance with right distance
+	CMP		r12, r13		; is moving up better than right
+	JL		.up_min			; distance moving up is closer
+	JMP		.right_min		; jump to right being minimum 
+
+.up_min:
+	MOV		QWORD [dir], 0	; set current direction to up
+	MOV		r8, r12			; set up dist as new min
+	XOR		rdx, rdx		; x=0
+	MOV		rsi, -1			; y=-1
+	JMP		.is_down_lose
+
+.right_min:
+	MOV		QWORD [dir], 2	; set current direction to right
+	MOV		r8, r13			; set right dist as new min
+	MOV		rdx, 1			; x=1
+	XOR		rsi, rsi		; y=0
+	JMP		.is_down_lose
+
+.is_down_lose:
+	CMP		r14, 0			; distance is 0 so enemy has hit the player
+	JNE		.compare_down
+	
+	; lose the game
+	MOV		rdi, r9			; Enemy
+	MOV		rsi, 1			; Move down one row
+	XOR		rdx, rdx		; Move left/right zero columns
+	CALL	_move_player_yx	; Move enemy before ending game so user knows they were touched	
+	CALL	_menus.show_lose_menu	; End game
+
+.compare_down:
+	CMP		r14, r8			; is down dist smaller than current
+	JL		.down_min
+	JMP		.is_left_lose	
+
+.down_min:
+	MOV		QWORD [dir], 4	; set current direction to down
+	MOV		r8, r14			; set down as new min
+	XOR		rdx, rdx		; x=0
+	MOV		rsi, 1			; y=1
+
+.is_left_lose:
+	CMP		r15, 0			; if distance is 0, we have hit the player
+	JNE		.compare_left	; not a losing move
+		
+	; lose the game
+	MOV		rdi, r9			; Enemy
+	XOR		rsi, rsi		; Move up/down zero row
+	MOV		rdx, -1			; Move left 1 columns
+	CALL	_move_player_yx	; Move enemy before ending game so user knows they were touched	
+	CALL	_menus.show_lose_menu	; End game
+
+
+.compare_left:
+	CMP		r15, r8			; is left dist smaller than current min
+	JE		.left_min
+	JMP		.end_game	
+
+
+.left_min:
+	MOV		QWORD [dir], 8	; set current direction to left
+	MOV		r8, r15			; set left as new min
+	MOV		rdx, -1			; x=-1
+	XOR		rsi, rsi		; y=0
+
+.end_game:
+	MOV		rdi, r9			; enemy
 	CALL	_move_player_yx		
+	CMOVE	r8,r9
 	RET
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Calculates the distance between 2 points
+; rdi: 1st x coordiate
+; rsi: 1st y coordinate
+; rdx: 2nd x coordinate
+; rcx: 2nd y coordinate
+;
+;;;;;;;;;;;;;;;;;;;;;;;;
+_calc_distance:
+	CMP		rdi, rdx	; Figure out with x is smaller
+	JL		.x_lesser
+	JMP		.x_greater
+
+.x_lesser:
+	SUB		rdx, rdi	; x_2 - x_1 (guranteed positive since x_2 > x_1
+	MOV		rdi, rdx	; make sure x difference stored in rdi
+	JMP		.check_y
+
+.x_greater:
+	SUB		rdi, rdx	; x-1 - x_2 (guranteed positive since x_1 >= x_2
+
+.check_y:
+	CMP		rsi, rcx
+	JL		.y_lesser
+	JMP		.y_greater
+
+.y_lesser:
+	SUB		rcx, rsi	; y_2 - y_1 (guranteed positive since y_2 > y_1)
+	MOV		rsi, rcx	; make sure y difference is stored in rsi
+	JMP		.get_dist
+
+.y_greater:
+	SUB		rsi, rcx	; y_1 - y_2 (guranteed positive since y_1 >= y_2)
+
+.get_dist:
+	IMUL	rdi, rdi	; x^2
+	IMUL	rsi, rsi	; y^2
+	ADD		rdi, rsi	; x^2+y^2, No need to do sqrt 
+
+	MOV		rax, rdi
+	RET	
 
 _menus:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

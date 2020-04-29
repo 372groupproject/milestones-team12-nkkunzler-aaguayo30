@@ -129,13 +129,6 @@ _move_player_yx:
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 _valid_move:
-;	PUSH	rbp
-;	MOV		rbp, rsp
-;	SUB		rsp, 24
-;	MOV		[rbp-8], rdi	; Player *
-;	MOV		[rbp-16], rsi	; y movement direction
-;	MOV		[rbp-24], rdx	; x movement direction
-
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Checking that the player is within the bounds
 	; of the window that it is located in
