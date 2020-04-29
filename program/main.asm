@@ -390,7 +390,7 @@ _move_enemy:
 	CMP		r8, 0
 	JNE		.check_right
 
-;.set_up:
+.set_up:
 	XOR		r12, r12
 
 .check_right:
@@ -618,7 +618,7 @@ _move_enemy:
 ;;;;;;;;;;;;;;;;;;;;;;;;
 _calc_distance:
 	CMP		rdi, rdx	; Figure out with x is smaller
-	JL		.x_lesser
+	JL		.x_lesser	; x_1 < x_2
 	JMP		.x_greater
 
 .x_lesser:

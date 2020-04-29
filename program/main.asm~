@@ -270,17 +270,6 @@ _game_loop:
 	MOV		rdi, [rdi+8]
 	CMP		rdi, 0x0
 	JLE		_menus.show_lose_menu
-;<<<<<<< HEAD
-	;;;;;;;;;;;;;;;;;;;;;;;;;
-	; Menu toggle options
-	;;;;;;;;;;;;;;;;;;;;;;;;;
-;	CMP		r12, 0xa		; If user input is new line, exit game
-;	JE		_menus.show_lose_menu
-
-;	CMP		r12, 'p'
-;	JE		_menus.show_pause_menu
-;=======
-;>>>>>>> 42e55c5690b0a812ab4a1b398f515aac9ee66b6a
 
 
 .move_player:
@@ -401,7 +390,7 @@ _move_enemy:
 	CMP		r8, 0
 	JNE		.check_right
 
-;.set_up:
+.set_up:
 	XOR		r12, r12
 
 .check_right:
@@ -629,7 +618,7 @@ _move_enemy:
 ;;;;;;;;;;;;;;;;;;;;;;;;
 _calc_distance:
 	CMP		rdi, rdx	; Figure out with x is smaller
-	JL		.x_lesser
+	JL		.x_lesser	; x_1 < x_2
 	JMP		.x_greater
 
 .x_lesser:
