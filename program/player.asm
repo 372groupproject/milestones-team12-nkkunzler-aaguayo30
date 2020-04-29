@@ -184,6 +184,9 @@ _valid_move:
 	CALL	mvwinch             	; get character at next location
 	AND		rax, 0xff         	; extract character value
 
+	CMP		rax, 'P'
+	JE		.valid_move_exit_pass
+
 	; if (player_x + shift, player_y + shift)== space then move there
 	CMP		rax, ' '            	; check if space is free to move into
 	JE		.valid_move_exit_pass	; move player if valid

@@ -383,24 +383,24 @@ _move_enemy:
 	MOV		r12, rax
 	
 
-	;check if we can move down
+	;check if we can move right
 	MOV		rdi, r9
-	MOV		rsi, 1			; Move dowm 1 row
-	MOV		rdx, 0			; move left/right zero columns
+	MOV		rsi, 0			; Move up/dowm 0 row
+	MOV		rdx, 1			; move left/right 1 columns
 	CALL	_valid_move	
 	MOV		r13, rax
+
+	;check if we can move down
+	MOV		rdi, r9
+	MOV		rsi, 1			; Move down 1 row
+	MOV		rdx, 0			; move left/right 0 column
+	CALL	_valid_move	
+	MOV		r14, rax
 
 	;check if we can move left
 	MOV		rdi, r9
 	MOV		rsi, 0			; Move up/down zero row
 	MOV		rdx, -1			; move left 1 column
-	CALL	_valid_move	
-	MOV		r14, rax
-
-	;check if we can move right
-	MOV		rdi, r9
-	MOV		rsi, 0			; Move up/down zero row
-	MOV		rdx, 1			; move right 1 column
 	CALL	_valid_move	
 	MOV		r15, rax
 
