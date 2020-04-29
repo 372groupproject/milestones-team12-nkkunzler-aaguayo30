@@ -373,11 +373,15 @@ _move_enemy:
 	;;;;;;;;;;;;;;;;;;;;;;;
 
 	;check if we can move up
+	PUSH	r10
+	PUSH	r11
+
 	MOV		rdi, r9			; 
 	MOV		rsi, -1			; Move up 1 row
 	MOV		rdx, 0			; move left/right zero columns
 	CALL	_valid_move	
 	MOV		r12, rax
+	
 
 	;check if we can move down
 	MOV		rdi, r9
@@ -400,6 +404,8 @@ _move_enemy:
 	CALL	_valid_move	
 	MOV		r15, rax
 
+	POP		r11
+	POP		r10
 ;
 ; Disable the move that was previously taken
 ; This prevents the enemy from ever going backwards and thus
@@ -452,7 +458,7 @@ _move_enemy:
 	JE		.up_closest
 
 .up_set_neg:
-	MOV		r12, -1			; set distance to -1
+	MOV		r12, 1000000000			; set distance to BIG NUMBER (super sloppy, I know)
 	JMP		.right_check
 	
 .up_closest:
@@ -470,7 +476,7 @@ _move_enemy:
 	JMP		.right_closest
 
 .right_set_neg:
-	MOV		r13, -1			; set distance = -1
+	MOV		r13, 10000000000			; set distance = BIG NUMBER
 	JMP		.down_check
 
 
@@ -490,7 +496,7 @@ _move_enemy:
 	JE		.down_closest
 
 .down_set_neg:
-	MOV		r14, -1			; set disrance = 1
+	MOV		r14, 100000000000			; set disrance = BIG NUMBER
 	JMP		.left_check
 
 .down_closest:
@@ -509,7 +515,7 @@ _move_enemy:
 	JE		.left_closest
 
 .left_set_neg:
-	MOV		r15, -1			; set distance = -1
+	MOV		r15, 100000000000			; set distance = BIG NUMBER
 	JMP		.perform_enemy_move
 
 .left_closest:
@@ -520,7 +526,7 @@ _move_enemy:
 	MOV		rdx, r11		; store enemy x
 	ADD		rdx, -1			; move left one column
 	CALL	_calc_distance	; calculate distance between player and enemy next move
-	MOV		r12, rax
+	MOV		r15, rax
 
 ;
 ; Need to find direction to move in
@@ -561,14 +567,14 @@ _move_enemy:
 	JMP		.right_min		; jump to right being minimum 
 
 .up_min:
-	MOV		QWORD [dir], 0	; set current direction to up
+	MOV		QWORD [dir], 4	; disable going down (aka backwards)
 	MOV		r8, r12			; set up dist as new min
 	XOR		rdx, rdx		; x=0
 	MOV		rsi, -1			; y=-1
 	JMP		.is_down_lose
 
 .right_min:
-	MOV		QWORD [dir], 2	; set current direction to right
+	MOV		QWORD [dir], 8	; disable going left (backwards)
 	MOV		r8, r13			; set right dist as new min
 	MOV		rdx, 1			; x=1
 	XOR		rsi, rsi		; y=0
@@ -591,7 +597,7 @@ _move_enemy:
 	JMP		.is_left_lose	
 
 .down_min:
-	MOV		QWORD [dir], 4	; set current direction to down
+	MOV		QWORD [dir], 0	; disable going up (backwards)
 	MOV		r8, r14			; set down as new min
 	XOR		rdx, rdx		; x=0
 	MOV		rsi, 1			; y=1
@@ -615,7 +621,7 @@ _move_enemy:
 
 
 .left_min:
-	MOV		QWORD [dir], 8	; set current direction to left
+	MOV		QWORD [dir], 2	; disable going right (backwards)
 	MOV		r8, r15			; set left as new min
 	MOV		rdx, -1			; x=-1
 	XOR		rsi, rsi		; y=0

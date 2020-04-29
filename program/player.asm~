@@ -198,11 +198,12 @@ _valid_move:
 	ADD		QWORD [rdi+32], 1
 
 .valid_move_exit_pass:
-	MOV		rax, 1
+	XOR		rax, rax
+	ADD		rax, 0x1
 	LEAVE
 	RET
 
 .valid_move_exit_fail:
-	MOV		rax, 0
+	XOR		rax, rax
 	LEAVE
 	RET
