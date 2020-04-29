@@ -160,6 +160,7 @@ _load_map:
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
+	MOV		rcx, 100			; Starting score
 	CALL	_new_scoreboard
     MOV     [rbp-24], rax
 
@@ -195,30 +196,42 @@ _load_map:
 ;
 ; Can use window.asm for maybe helpful procedures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV     r12, 'l'		; Key pressed
+	XOR		r12, r12		; Key pressed
 
-    MOV     rdi, [rbp-16]
-    MOV     rdi, [rdi]
+	MOV		rdi, [rbp-16]
+	MOV		rdi, [rdi]
 	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
-	CALL	wtimeout	
+	CALL	wtimeout
 
 _game_loop:
-    MOV     rdi, [rbp-24]
-    CALL    _increament_score
-
-;	CALL	_move_enemy
-
-    MOV     rdi, [rbp-24]
-    MOV     rdi, [rdi]
-    CALL    wrefresh
-
-	MOV		rdi, [rbp-8]    ; Window in which to get input from
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Getting the user input, if no input after 
+	; x milliseconds auto move
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-16]
+	MOV		rdi, [rdi]
 	CALL	wgetch			; Waiting for user input
 
 	CMP		eax, -1			; If the user does not input movement -1 is returned
 	JE		.move_player	; If no input move player in direction of last move
 	MOV		r12, rax
-	
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; If the player has pressed a move button
+	; add one to their score, if score is zero, they lose
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-24]
+	MOV		rsi, -5				; Amount to decrease the score by
+	CALL	_increment_score
+
+	MOV		rdi, [rbp-24]
+	MOV		rdi, [rdi+8]
+	CMP		rdi, 0x0
+	JLE		_menus.show_lose_menu
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;
+	; Menu toggle options
+	;;;;;;;;;;;;;;;;;;;;;;;;;
 	CMP		r12, 0xa		; If user input is new line, exit game
 	JE		_menus.show_lose_menu
 

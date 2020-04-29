@@ -160,7 +160,7 @@ _load_map:
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
-	CALL	_new_scoreboard
+	;CALL	_new_scoreboard
     MOV     [rbp-24], rax
 
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -204,13 +204,13 @@ _load_map:
 
 _game_loop:
     MOV     rdi, [rbp-24]
-    CALL    _increament_score
+    ;CALL    _increament_score
 
-	CALL	_move_enemy
+	;CALL	_move_enemy
 
     MOV     rdi, [rbp-24]
     MOV     rdi, [rdi]
-    CALL    wrefresh
+    ;CALL    wrefresh
 
 	MOV		rdi, [rbp-8]    ; Window in which to get input from
 	CALL	wgetch			; Waiting for user input
@@ -255,7 +255,7 @@ _game_loop:
 
 .mv_player_right:
 	MOV		rdi, [rbp-16]	; GameBoard
-	MOV		rdi, [rdi+8]	; Player
+	MOV		rdi, [rdi+16]	; Player
 	MOV		rsi, 0			; Move player down/up zero rows
 	MOV		rdx, 1			; Move the player right 1 column
 	CALL	_move_player_yx	; CALL window.asm corresponding function
@@ -295,7 +295,7 @@ _move_enemy:
     ; in hopes of finding a new pathway
  	;
 	MOV		rdi, [rbp-16] 	; Gameboard
-	MOV		rdi, [rdi+24]	; Enemy
+	MOV		rdi, [rdi+8]	; Enemy
 	MOV		rsi, 0
 	MOV		rdx, 1
 	CALL	_move_player_yx		
