@@ -179,7 +179,7 @@ _load_map:
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
-	MOV		rcx, 100			; Starting score
+	MOV		rcx, 200			; Starting score
 	CALL	_new_scoreboard
     MOV     [rbp-24], rax
 
@@ -222,10 +222,43 @@ _load_map:
 	MOV		rsi, 100		; Wait <x> milliseconds before skipping user input
 	CALL	wtimeout
 
+	XOR		r13, r13
+
 _game_loop:
+	; Adding 1 to number of loop iterations, used to decrease score
+	ADD		r13, 1
+	MOV		rdx, 0
+	MOV		rax, r13
+	MOV		rcx, 10
+	DIV		rcx
+	CMP		rdx, 0x0
+	JNE		.cont_loop
+
+.decreament_score:
+	XOR		r13, r13
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; If the player has pressed a button, that is not reserved,
+	; take 5 points away
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	MOV		rdi, [rbp-24]
+	MOV		rsi, -5				; Amount to decrease the score by
+	CALL	_increment_score
+
+	MOV		rdi, [rbp-24]
+	MOV		rdi, [rdi+8]
+	CMP		rdi, 0x0
+	JLE		_menus.show_lose_menu
+
+.cont_loop:
+
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	; Moving the enemy
+	;;;;;;;;;;;;;;;;;;;;;;;;
+	PUSH	r13
 	PUSH	r12
 	CALL	_move_enemy
 	POP		r12
+	POP		r13
 
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Checking whether all tokens in the game were collected
@@ -238,7 +271,6 @@ _game_loop:
 	CMP		rdi, rax		; If player has same # tokens as gameboard has # toks the player won
 	JE		_menus.show_win_menu
 
-	;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Getting the user input, if no input after 
 	; x milliseconds auto move
@@ -258,18 +290,6 @@ _game_loop:
 	CMP		r12, 'p'
 	JE		_menus.show_pause_menu
 
-	;;;;;;;;;;;;;;;;;;;;;;;;
-	; If the player has pressed a button, that is not reserved,
-	; take 5 points away
-	;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV		rdi, [rbp-24]
-	MOV		rsi, -5				; Amount to decrease the score by
-	CALL	_increment_score
-
-	MOV		rdi, [rbp-24]
-	MOV		rdi, [rdi+8]
-	CMP		rdi, 0x0
-	JLE		_menus.show_lose_menu
 
 
 .move_player:

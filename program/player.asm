@@ -174,7 +174,7 @@ _valid_move:
 	; by looking in the new spot and determining if there
 	; is a space or not
 	;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV		r10, rdi				; move player so not overwritten
+	;MOV		r10, rdi				; move player so not overwritten
  
 	MOV		rsi, [rbp - 16]			; get new y value
 	ADD 	rsi, [rdi + 16]     	; add current x value to new
