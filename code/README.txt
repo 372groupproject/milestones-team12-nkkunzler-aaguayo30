@@ -58,6 +58,12 @@ Milestone 4
 	- To run the p4_feature.asm program, use:
 	  $ make p4_feature && ./p4_feature
 
+Milestone 5
+-----------
+	- To run the p5_feature.asm program, use:
+	  $ make p5_feature && ./p5_feature
+	Note: May cause a seg fault depending on the machine
+
 Authors
 =======
 Angel Aguayo  

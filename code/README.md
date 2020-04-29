@@ -55,6 +55,11 @@ Note: This may also cause a segmentation fault (Jump may work depending on statu
 ```make p4_feature && ./p4_feature```  
 [Sorts and prints the lowest value in the list]
 
+### <ins>Milestone 5</ins>
+* To run the p5_feature.asm program, use:  
+```make p5_feature && ./p5_feature```  
+Note: May cause a seg fault depending on the machine
+
 ## Authors
 Angel Aguayo  
 Nicholas Kunzler
