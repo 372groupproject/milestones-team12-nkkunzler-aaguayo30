@@ -179,7 +179,7 @@ _load_map:
 	POP		rsi
 	ADD		rsi, map_height
 	MOV		rdx, map_width
-	MOV		rcx, 200			; Starting score
+	MOV		rcx, 700			; Starting score
 	CALL	_new_scoreboard
     MOV     [rbp-24], rax
 
@@ -259,6 +259,8 @@ _game_loop:
 	CALL	_move_enemy
 	POP		r12
 	POP		r13
+
+.cont2_loop:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;
 	; Checking whether all tokens in the game were collected
@@ -352,6 +354,7 @@ _game_loop:
 	MOV		rdx, 0			; Move the player left/right zero rows
 	CALL	_move_player_yx	; CALL window.asm corresponding function
 	JMP		_game_loop		; Jump back to game loop to get next input
+
 
 _move_enemy:
 	;

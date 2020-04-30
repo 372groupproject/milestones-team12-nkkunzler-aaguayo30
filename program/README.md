@@ -1,18 +1,13 @@
 # Project
 
-This project is a Jail like puzzle game where the objective is to move the player
-from the start of the map to the end of the map without getting caught by the guard
-or enemy players.
+This project is a Pac-Man stytle puzzle game where the objective is to move the player around the board and collection golden 'o's while trying to avoid the enemy 'E'. If your score becomes zero or the enemy hits you, you lose the game. Collect all the coins and you win, good luck, its harder than you think.
 
 ## Usage
 
-* To start the game run:  
+* To start the game, run:  
 ```make main && ./main```
 
-## Goals
-- [X] Create a menu selection or way to start the game
-- [X] Read a map text file and render to terminal screen
-  - [X] Center the map
-- [X] Create a character that can move around the map
-- [ ] Create an enemy that chases after the player's character
-- [X] Create a win/lose screen or message
+* To move around use the ASDW or HJKL keys.  
+* To pause while in game, press the 'p' key.  
+
+Good Luck!
