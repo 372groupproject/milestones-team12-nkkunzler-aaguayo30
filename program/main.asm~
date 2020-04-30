@@ -30,7 +30,7 @@ extern printw
 extern start_color
 
 section .data
-	title			db "GAME TITLE", 0x0
+	title			db "NICK AND ANGELS AMAZING ADVENTURE", 0x0
 	play_str		db "PLAY", 0x0
 
 	win_str			db "YOU WON!", 0x0
@@ -48,7 +48,7 @@ section .data
 	gis_4			db "Nervous? Press any key to stop and watch your score melt.", 0x0
 	mv_key_info_str	db "Move using boring AWSD keys or the interestig HJKL keys.", 0x0
 	ex_key_info_str db "Pause by pressing the 'P' key, but who pauses anyway?", 00
-	hint_str		db "Hint: Percision over speed, no unnecessary moves!!", 0x0
+	hint_str		db "Hint: Precision over speed, no unnecessary moves!!", 0x0
 	credit_str		db "Developed by: Angel Aguayo and Nicholas Kunzler", 0x0
 
 	exit_str		db "EXIT", 0x0
