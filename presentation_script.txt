@@ -1,0 +1,31 @@
+Intel was founded in 1968 by two American engineers, Robert Noyce and Godon Moore. Starting off, they didnt have much success in chips, and pivoted towards microprocessors, where they developed the 4004, which was used in japanese calculators.  
+
+It wasnt until 1976 where they developed the 8086, which was the birth of the x86 instruction set. The sole designer was Stephen Morse, a software ad electrical engineer who identified key flaws with the 8800 processor they were working on. A software oriented approach led to efficient 16 bit instructions and 1 megabyte of memory. While better than the previous microprocessors, it was actually very poorly designed, and with the Z80 already being the standard chip in many business machines, the 8086 was not very popular. 
+
+The 8086 started off slow, only gaining traction once NASA used it for their imbedded systems, mainly to control diagnostic tests. 
+
+In 1979 the 8088 was released, where IBM used it for their first massively produced PC. Many other companies started cloning IBMs PC, leading to the 8088 getting more usage and eventual innovation into 32 bit and 64 bit instructions, making it a brand we know and use today
+
+X86 is considered to be a weakly typed language due to the fact that the data types are registers, and registers no not understand a difference between a pointer and an int, its just a value.
+
+Although registers are unrestricted to type, they are restricted to a maximum size and thus leading to have various different versions, such as 16-bit, 32-bit, and 64-bit.
+
+In the 16 bit version of x86 the maximum register size is 16 bits, 32-bit version its a maximum size of 32-bts, and 64-bit version is restricted to a maximum of 64 bits.
+
+All registers are prefixed with a specific letter denoting which size is to be used. 16-bit versions use a prefix letter of ‘A’ while the 64-bit version uses a prefix of ‘R’.
+
+X86 is friendly though, as it allows the use of smaller registers, such as utilizing a 16-bit register in a 64-bit program.
+
+X86 primary control structure is the Jump instruction. There are two types of jumps, far and near, which limits the maximum offset that can be jumped
+
+The loop instruction, which can be considered to be another control structure but in reality is just another type of JUMP instruction, uses a near jump, limiting the jump offset of 127.
+
+The CALL and RET instructions which also use jump use far jumps.
+
+Lets comparing x86 to MIPS assembly
+
+On the left side is the standard prologue and epilogues that most of us learned in 252 using MIPS, which in case anybody forgot follows a RISC architecture, or reduced instruction set.
+
+On the right is x86’s equivalent MIPS prologue and epilogue. Since x86 uses CISC, or complex instruction set computing, some instructions such as PUSH and LEAVE are composed of multiple instructions. This allows x86 to have more complex instructions and also reduce the number of instructions required by to explicitly written out.
+
+However, because the CISC architectures tend to have higher power consumption, these types of languages are found in more desktop and workstations. On the other hand, RISC architecture, such as ARM assembly, tends to have smaller power consumptions and as a result the RISC architecture is primarily found in more mobile devices such as phones.
