@@ -473,10 +473,10 @@ _move_enemy:
 
 .right_check:
 	CMP		r13, 1			; is right a valid move
-	JMP		.right_closest
+	JE		.right_closest
 
 .right_set_neg:
-	MOV		r13, 10000000000			; set distance = BIG NUMBER
+	MOV		r13, 1000000			; set distance = BIG NUMBER
 	JMP		.down_check
 
 
@@ -563,7 +563,7 @@ _move_enemy:
 .compare_right:
 	; compare up distance with right distance
 	CMP		r12, r13		; is moving up better than right
-	JL		.up_min			; distance moving up is closer
+	JLE		.up_min			; distance moving up is closer
 	JMP		.right_min		; jump to right being minimum 
 
 .up_min:
@@ -593,7 +593,7 @@ _move_enemy:
 
 .compare_down:
 	CMP		r14, r8			; is down dist smaller than current
-	JL		.down_min
+	JLE		.down_min
 	JMP		.is_left_lose	
 
 .down_min:
@@ -616,7 +616,7 @@ _move_enemy:
 
 .compare_left:
 	CMP		r15, r8			; is left dist smaller than current min
-	JL		.left_min
+	JLE		.left_min
 	JMP		.end_game	
 
 
@@ -629,7 +629,7 @@ _move_enemy:
 .end_game:
 	MOV		rdi, r9			; enemy
 	CALL	_move_player_yx		
-	CMOVE	r8,r9
+;	CMOVE	r8,r9
 	RET
 
 
